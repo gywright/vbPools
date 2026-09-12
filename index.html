@@ -1,0 +1,1878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AES Volleyball Pool Rank & Tie-Break Calculator</title>
+  
+  <!-- PWA Meta Tags -->
+  <meta name="theme-color" content="#4f46e5">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="AES Calc">
+  <meta name="application-name" content="AES Calc">
+  <meta name="description" content="Official USAV and AES Volleyball Pool Rank and Tie-Break Calculator with real-time multi-court state saving.">
+
+  <!-- Manifest Link dynamically populated by JS -->
+  <link rel="manifest" href="./manifest.json">
+
+  <!-- Icons -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏐</text></svg>">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏐</text></svg>">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    .font-mono-num {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    /* Smooth focus rings and inputs */
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { 
+      -webkit-appearance: none; 
+      margin: 0; 
+    }
+    input[type=number] {
+      -moz-appearance: textfield;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen antialiased flex flex-col selection:bg-indigo-500 selection:text-white">
+
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-indigo-200 shadow-md font-bold text-xl select-none">
+          🏐
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-lg font-extrabold text-slate-900 tracking-tight">AES Pool Rank Calculator</h1>
+            <span class="bg-indigo-100 text-indigo-700 text-xs font-semibold px-2 py-0.5 rounded-full border border-indigo-200">USAV Rules</span>
+            <span id="pwaBadge" class="hidden bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-200 uppercase tracking-wide">PWA Active</span>
+          </div>
+          <p class="text-xs text-slate-500">Official paper tie-break criteria & 2-state court switcher</p>
+        </div>
+      </div>
+
+      <!-- Actions & Preset Controls -->
+      <div class="flex items-center gap-2 flex-wrap">
+        <!-- Install App Button (Visible when PWA can be installed) -->
+        <button id="btnInstallPwa" class="hidden items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-all animate-pulse">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          Install App
+        </button>
+
+        <div class="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-100">
+          <button id="btnPool3" class="px-3 py-1.5 text-xs font-semibold rounded-md transition-all text-slate-600 hover:text-slate-900">
+            3-Team Pool
+          </button>
+          <button id="btnPool4" class="px-3 py-1.5 text-xs font-semibold rounded-md transition-all bg-white text-indigo-600 shadow-sm font-bold">
+            4-Team Pool
+          </button>
+        </div>
+
+        <div class="relative inline-block text-left">
+          <select id="presetSelector" class="bg-white border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-medium rounded-lg px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all cursor-pointer">
+            <option value="">⚡ Load Scenario...</option>
+            <option value="one-left">🎯 1 Match Left (Path-to-Rank Analyzer)</option>
+            <option value="clear">Simple 1st to 4th (No Ties)</option>
+            <option value="2way">2-Way Tie for 2nd (H2H Decision)</option>
+            <option value="3way-set">3-Way Tie broken by Set %</option>
+            <option value="3way-points">3-Way Tie broken by Point %</option>
+            <option value="empty">Clear All Scores</option>
+          </select>
+        </div>
+
+        <button id="btnReset" title="Clear current match scores" class="p-2 text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 rounded-lg transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 w-full flex-grow space-y-5">
+    
+    <section class="bg-white rounded-2xl border border-slate-200 shadow-xs p-4 sm:p-5">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-3.5 pb-2.5 border-b border-slate-100">
+        <div class="flex items-center gap-2">
+          <span class="flex h-2.5 w-2.5 relative">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-indigo-600"></span>
+          </span>
+          <h2 class="text-sm font-extrabold text-slate-900 tracking-tight uppercase">Saved Pool States (2 Memory Slots)</h2>
+          <span class="text-[11px] text-slate-400 hidden sm:inline">• Save 2 courts, morning vs afternoon waves, or what-if runs</span>
+        </div>
+        <div class="text-[11px] text-indigo-700 font-medium bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-100">
+          Fast Switching &amp; Instant Restores
+        </div>
+      </div>
+
+      <!-- State Slots Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        
+        <!-- Slot 1 Card -->
+        <div id="slot1Card" class="relative rounded-xl border-2 border-indigo-200 bg-indigo-50/30 p-3.5 transition-all">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <div class="flex items-center gap-2">
+              <span class="w-6 h-6 rounded-lg bg-indigo-600 text-white font-black text-xs flex items-center justify-center shadow-xs">1</span>
+              <input type="text" id="slot1TitleInput" value="Court 1 / Pool A" class="text-xs font-bold text-slate-900 bg-transparent border-b border-dashed border-slate-300 focus:border-indigo-600 focus:outline-none px-1 py-0.5" placeholder="Slot 1 Title">
+            </div>
+            <span id="slot1StatusBadge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
+              Empty Slot
+            </span>
+          </div>
+
+          <div id="slot1Summary" class="text-xs text-slate-500 mb-3 min-h-[32px] flex items-center">
+            No saved state yet. Click "Save Current to Slot 1" to snapshot this pool.
+          </div>
+
+          <div class="flex items-center gap-2 pt-1 border-t border-slate-200/60">
+            <button id="btnSaveSlot1" class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition-colors">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+              Save Current
+            </button>
+            <button id="btnLoadSlot1" disabled class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+              Load Slot 1
+            </button>
+            <button id="btnClearSlot1" title="Clear Slot 1" disabled class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg disabled:opacity-30 disabled:pointer-events-none transition-colors">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Slot 2 Card -->
+        <div id="slot2Card" class="relative rounded-xl border border-slate-200 bg-slate-50/50 p-3.5 transition-all">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <div class="flex items-center gap-2">
+              <span class="w-6 h-6 rounded-lg bg-violet-600 text-white font-black text-xs flex items-center justify-center shadow-xs">2</span>
+              <input type="text" id="slot2TitleInput" value="Court 2 / Pool B" class="text-xs font-bold text-slate-900 bg-transparent border-b border-dashed border-slate-300 focus:border-violet-600 focus:outline-none px-1 py-0.5" placeholder="Slot 2 Title">
+            </div>
+            <span id="slot2StatusBadge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
+              Empty Slot
+            </span>
+          </div>
+
+          <div id="slot2Summary" class="text-xs text-slate-500 mb-3 min-h-[32px] flex items-center">
+            No saved state yet. Click "Save Current to Slot 2" to snapshot this pool.
+          </div>
+
+          <div class="flex items-center gap-2 pt-1 border-t border-slate-200/60">
+            <button id="btnSaveSlot2" class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-violet-600 hover:bg-violet-700 text-white shadow-xs transition-colors">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+              Save Current
+            </button>
+            <button id="btnLoadSlot2" disabled class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+              Load Slot 2
+            </button>
+            <button id="btnClearSlot2" title="Clear Slot 2" disabled class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg disabled:opacity-30 disabled:pointer-events-none transition-colors">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/80 rounded-2xl p-4 shadow-xs">
+      <div class="flex items-start gap-3">
+        <div class="text-blue-600 mt-0.5 flex-shrink-0">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </div>
+        <div class="text-xs text-slate-700 leading-relaxed">
+          <span class="font-bold text-slate-900">Official USAV/AES Paper Tie-Break Order:</span>
+          1) <strong class="text-indigo-900">Match %</strong> (Won / Total) &rarr;
+          2) <strong class="text-indigo-900">Head-to-Head</strong> (if 2 teams tied) &rarr;
+          3) <strong class="text-indigo-900">Set %</strong> among tied teams (Sets Won / Total Sets Played) &rarr;
+          4) <strong class="text-indigo-900">Point %</strong> among tied teams (Points Scored / Total Points Played) &rarr;
+          5) Coin Toss. <span class="text-slate-500 italic">No tie-break playoff sets are played. Every point scored counts!</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Final Match Path-to-Rank Scenario Analyzer (Shown when 1 match remains) -->
+    <div id="finalMatchScenarioCard" class="hidden transition-all">
+      <!-- Injected dynamically by JS -->
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <!-- LEFT: Inputs (6 Cols) -->
+      <div class="lg:col-span-6 space-y-6">
+        
+        <!-- Team Names Card -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-5">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
+              Pool Teams
+            </h2>
+            <div class="flex items-center gap-2 text-xs">
+              <label for="matchFormat" class="text-slate-500 font-medium">Format:</label>
+              <select id="matchFormat" class="bg-slate-50 border border-slate-200 text-slate-700 font-semibold rounded-md px-2 py-1 focus:ring-1 focus:ring-indigo-500">
+                <option value="best2of3">Best 2 of 3 (25, 25, 15)</option>
+                <option value="2sets">2 Sets Only (25, 25)</option>
+                <option value="best3of5">Best 3 of 5 (25, 25, 25, 25, 15)</option>
+              </select>
+            </div>
+          </div>
+          
+          <div id="teamInputGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <!-- Injected by JS -->
+          </div>
+        </div>
+
+        <!-- Match Schedule & Score Entry -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-5">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                Match Scores
+              </h2>
+              <p class="text-xs text-slate-500">Enter set scores for each pool match</p>
+            </div>
+            <span id="matchProgressBadge" class="text-xs px-2.5 py-1 rounded-full font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+              0 / 6 Matches Complete
+            </span>
+          </div>
+
+          <div id="matchesContainer" class="space-y-3.5">
+            <!-- Matches dynamically inserted here -->
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Standings & Tiebreak Explanations (6 Cols) -->
+      <div class="lg:col-span-6 space-y-6">
+        
+        <!-- Live Pool Standings Table Card -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+          <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
+            <div>
+              <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                🏆 Official Pool Standings
+              </h2>
+              <p class="text-xs text-slate-500">Rankings updated automatically using USAV tie-breakers</p>
+            </div>
+            <button id="btnCopyStandings" class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg text-slate-700 shadow-xs transition-colors">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"/></svg>
+              Copy Text
+            </button>
+          </div>
+
+          <!-- Standings Table -->
+          <div class="overflow-x-auto custom-scrollbar">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="text-[11px] font-bold tracking-wider text-slate-500 uppercase bg-slate-100/70 border-b border-slate-200">
+                  <th class="py-2.5 px-3 w-12 text-center">Rank</th>
+                  <th class="py-2.5 px-3">Team</th>
+                  <th class="py-2.5 px-3 text-center">Matches</th>
+                  <th class="py-2.5 px-3 text-center">Match %</th>
+                  <th class="py-2.5 px-3 text-center">Sets (W-L)</th>
+                  <th class="py-2.5 px-3 text-center">Set %</th>
+                  <th class="py-2.5 px-3 text-center">Pts (W-L)</th>
+                  <th class="py-2.5 px-3 text-center">Point %</th>
+                </tr>
+              </thead>
+              <tbody id="standingsTableBody" class="divide-y divide-slate-100 text-xs">
+                <!-- Rows injected by JS -->
+              </tbody>
+            </table>
+          </div>
+          <div class="p-3 bg-slate-50/50 border-t border-slate-100 text-[11px] text-slate-500 flex items-center justify-between">
+            <span>Formula: <code class="font-mono bg-white px-1 py-0.5 rounded border border-slate-200">Won ÷ (Won + Lost)</code></span>
+            <span class="italic text-slate-400">Green = Advances to Gold Bracket</span>
+          </div>
+        </div>
+
+        <!-- Tie-Break Resolution Audit Log -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-5">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
+              Tie-Break Audit &amp; Resolution Path
+            </h3>
+            <span class="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">AES Algorithmic Audit</span>
+          </div>
+
+          <div id="tieBreakAuditContainer" class="space-y-2 text-xs">
+            <!-- Dynamic steps explaining the tie breaks -->
+          </div>
+        </div>
+
+        <!-- Head-to-Head Cross Matrix -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-5">
+          <h3 class="text-sm font-bold text-slate-900 uppercase tracking-wider mb-3 flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-violet-600"></span>
+            Head-to-Head Cross Table
+          </h3>
+          <div class="overflow-x-auto">
+            <table id="crossMatrixTable" class="w-full text-center border-collapse text-xs">
+              <!-- Rendered by JS -->
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- Notification Toast Container -->
+  <div id="toastNotification" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 pointer-events-none transition-all duration-300 bg-slate-900 text-white text-xs font-medium px-4 py-2.5 rounded-xl shadow-xl flex items-center gap-2">
+    <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+    <span id="toastMessage">Action completed</span>
+  </div>
+
+  <script>
+    // State management
+    const state = {
+      poolSize: 4, // 3 or 4
+      matchFormat: 'best2of3', // 'best2of3', '2sets', 'best3of5'
+      teams: [
+        { id: 'T1', seed: 1, name: 'Apex Premier 16-1', shortName: 'Apex 16-1' },
+        { id: 'T2', seed: 2, name: 'Storm Volleyball Elite', shortName: 'Storm Elite' },
+        { id: 'T3', seed: 3, name: 'Velocity Juniors Black', shortName: 'Velocity' },
+        { id: 'T4', seed: 4, name: 'Cascade Coast Select', shortName: 'Cascade' }
+      ],
+      matches: []
+    };
+
+    // In-memory 2-Slot Storage Structure (No localStorage used!)
+    const slotMemory = {
+      slot1: null,
+      slot2: null
+    };
+
+    // Standard schedule pairings for 3 and 4 team pools (AES / USAV Standard pool scheduling order)
+    const POOL_SCHEDULES = {
+      3: [
+        { matchNum: 1, teamA: 'T1', teamB: 'T3', ref: 'T2' },
+        { matchNum: 2, teamA: 'T2', teamB: 'T3', ref: 'T1' },
+        { matchNum: 3, teamA: 'T1', teamB: 'T2', ref: 'T3' }
+      ],
+      4: [
+        { matchNum: 1, teamA: 'T1', teamB: 'T3', ref: 'T2' },
+        { matchNum: 2, teamA: 'T2', teamB: 'T4', ref: 'T1' },
+        { matchNum: 3, teamA: 'T1', teamB: 'T4', ref: 'T3' },
+        { matchNum: 4, teamA: 'T2', teamB: 'T3', ref: 'T1' },
+        { matchNum: 5, teamA: 'T3', teamB: 'T4', ref: 'T2' },
+        { matchNum: 6, teamA: 'T1', teamB: 'T2', ref: 'T4' }
+      ]
+    };
+
+    const TEAM_COLORS = [
+      { bg: 'bg-blue-500', light: 'bg-blue-50 text-blue-700 border-blue-200', text: 'text-blue-600' },
+      { bg: 'bg-emerald-500', light: 'bg-emerald-50 text-emerald-700 border-emerald-200', text: 'text-emerald-600' },
+      { bg: 'bg-purple-500', light: 'bg-purple-50 text-purple-700 border-purple-200', text: 'text-purple-600' },
+      { bg: 'bg-amber-500', light: 'bg-amber-50 text-amber-700 border-amber-200', text: 'text-amber-600' }
+    ];
+
+    // PWA Manifest and Service Worker Registration
+    function setupPWA() {
+      // 1. Generate dynamic Web App Manifest
+      const manifestData = {
+        name: "AES Volleyball Pool Calculator",
+        short_name: "AES Calc",
+        description: "Official USAV & AES Volleyball Pool Rank and Tie-Break Calculator",
+        start_url: window.location.href,
+        display: "standalone",
+        background_color: "#f8fafc",
+        theme_color: "#4f46e5",
+        icons: [
+          {
+            src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' fill='%234f46e5' rx='36'/><text x='50%' y='55%' dominant-baseline='middle' text-anchor='middle' font-size='100'>🏐</text></svg>",
+            sizes: "192x192",
+            type: "image/svg+xml"
+          },
+          {
+            src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' fill='%234f46e5' rx='96'/><text x='50%' y='55%' dominant-baseline='middle' text-anchor='middle' font-size='280'>🏐</text></svg>",
+            sizes: "512x512",
+            type: "image/svg+xml"
+          }
+        ]
+      };
+
+      try {
+        const manifestBlob = new Blob([JSON.stringify(manifestData)], { type: 'application/json' });
+        const manifestUrl = URL.createObjectURL(manifestBlob);
+        const manifestLink = document.getElementById('dynamicManifest');
+        if (manifestLink) {
+          manifestLink.setAttribute('href', manifestUrl);
+        }
+      } catch (e) {
+        console.warn('Could not generate dynamic manifest blob:', e);
+      }
+
+      // 2. Register Service Worker using Blob
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js')
+         .then((reg) => console.log('PWA Service Worker registered:', reg.scope))
+         .catch((err) => console.warn('SW registration failed:', err));
+        });
+        try {
+          const swCode = `
+            const CACHE_NAME = 'aes-calc-v1';
+            self.addEventListener('install', (event) => {
+              self.skipWaiting();
+            });
+            self.addEventListener('activate', (event) => {
+              event.waitUntil(clients.claim());
+            });
+            self.addEventListener('fetch', (event) => {
+              event.respondWith(
+                fetch(event.request).catch(() => caches.match(event.request))
+              );
+            });
+          `;
+          const swBlob = new Blob([swCode], { type: 'application/javascript' });
+          const swUrl = URL.createObjectURL(swBlob);
+          navigator.serviceWorker.register(swUrl).then(() => {
+            const pwaBadge = document.getElementById('pwaBadge');
+            if (pwaBadge) pwaBadge.classList.remove('hidden');
+          }).catch(() => {});
+        } catch (err) {
+          // Sandbox or file protocol fallback
+        }
+      }
+
+      // 3. Capture PWA install prompt
+      let deferredPrompt = null;
+      const btnInstall = document.getElementById('btnInstallPwa');
+
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        if (btnInstall) {
+          btnInstall.classList.remove('hidden');
+          btnInstall.classList.add('inline-flex');
+        }
+      });
+
+      if (btnInstall) {
+        btnInstall.addEventListener('click', async () => {
+          if (!deferredPrompt) return;
+          deferredPrompt.prompt();
+          const { outcome } = await deferredPrompt.userChoice;
+          if (outcome === 'accepted') {
+            showToast('App installed successfully!');
+          }
+          deferredPrompt = null;
+          btnInstall.classList.add('hidden');
+        });
+      }
+    }
+
+    // State Slots Management
+    function saveToSlot(slotNumber) {
+      const slotKey = `slot${slotNumber}`;
+      const titleInput = document.getElementById(`slot${slotNumber}TitleInput`);
+      const customName = titleInput?.value.trim() || `Slot ${slotNumber}`;
+
+      // Deep copy pool state
+      const snapshot = {
+        name: customName,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        date: new Date().toLocaleDateString([], { month: 'short', day: 'numeric' }),
+        poolSize: state.poolSize,
+        matchFormat: state.matchFormat,
+        teams: JSON.parse(JSON.stringify(state.teams)),
+        matches: JSON.parse(JSON.stringify(state.matches))
+      };
+
+      slotMemory[slotKey] = snapshot;
+      updateSlotUI(slotNumber);
+      showToast(`Saved current pool state to ${customName}`);
+    }
+
+    function loadFromSlot(slotNumber) {
+      const slotKey = `slot${slotNumber}`;
+      const snapshot = slotMemory[slotKey];
+      if (!snapshot) {
+        showToast(`Slot ${slotNumber} is empty.`);
+        return;
+      }
+
+      // Restore parameters
+      state.poolSize = snapshot.poolSize;
+      state.matchFormat = snapshot.matchFormat;
+      state.teams = JSON.parse(JSON.stringify(snapshot.teams));
+      state.matches = JSON.parse(JSON.stringify(snapshot.matches));
+
+      // Update UI headers and format dropdowns
+      const btn3 = document.getElementById('btnPool3');
+      const btn4 = document.getElementById('btnPool4');
+      if (state.poolSize === 3) {
+        btn3.className = 'px-3 py-1.5 text-xs font-semibold rounded-md transition-all bg-white text-indigo-600 shadow-sm font-bold';
+        btn4.className = 'px-3 py-1.5 text-xs font-semibold rounded-md transition-all text-slate-600 hover:text-slate-900';
+      } else {
+        btn4.className = 'px-3 py-1.5 text-xs font-semibold rounded-md transition-all bg-white text-indigo-600 shadow-sm font-bold';
+        btn3.className = 'px-3 py-1.5 text-xs font-semibold rounded-md transition-all text-slate-600 hover:text-slate-900';
+      }
+
+      const matchFormatSelect = document.getElementById('matchFormat');
+      if (matchFormatSelect) matchFormatSelect.value = state.matchFormat;
+
+      // Re-render views
+      renderAll();
+      showToast(`Loaded ${snapshot.name} (${snapshot.timestamp})`);
+    }
+
+    function clearSlot(slotNumber) {
+      const slotKey = `slot${slotNumber}`;
+      slotMemory[slotKey] = null;
+      updateSlotUI(slotNumber);
+      showToast(`Slot ${slotNumber} cleared.`);
+    }
+
+    function updateSlotUI(slotNumber) {
+      const slotKey = `slot${slotNumber}`;
+      const data = slotMemory[slotKey];
+      const card = document.getElementById(`slot${slotNumber}Card`);
+      const statusBadge = document.getElementById(`slot${slotNumber}StatusBadge`);
+      const summaryDiv = document.getElementById(`slot${slotNumber}Summary`);
+      const btnLoad = document.getElementById(`btnLoadSlot${slotNumber}`);
+      const btnClear = document.getElementById(`btnClearSlot${slotNumber}`);
+
+      if (data) {
+        // Compute completed matches
+        let completed = 0;
+        data.matches.forEach(m => {
+          if (computeSingleMatchResult(m).isComplete) completed++;
+        });
+
+        card.className = `relative rounded-xl border-2 ${slotNumber === 1 ? 'border-indigo-500 bg-indigo-50/50' : 'border-violet-500 bg-violet-50/50'} p-3.5 transition-all shadow-xs`;
+        statusBadge.className = `text-[10px] font-bold px-2 py-0.5 rounded-full ${slotNumber === 1 ? 'bg-indigo-100 text-indigo-800' : 'bg-violet-100 text-violet-800'}`;
+        statusBadge.textContent = `Saved • ${data.timestamp}`;
+        
+        summaryDiv.innerHTML = `
+          <div class="space-y-0.5">
+            <div class="font-semibold text-slate-800">${data.poolSize}-Team Pool (${data.matchFormat === '2sets' ? '2 Sets' : (data.matchFormat === 'best3of5' ? 'Best 3 of 5' : 'Best 2 of 3')})</div>
+            <div class="text-[11px] text-slate-600">${completed}/${data.matches.length} matches complete • Teams: ${data.teams.slice(0, data.poolSize).map(t => t.shortName || t.name).join(', ')}</div>
+          </div>
+        `;
+
+        btnLoad.disabled = false;
+        btnClear.disabled = false;
+      } else {
+        card.className = 'relative rounded-xl border border-slate-200 bg-slate-50/50 p-3.5 transition-all';
+        statusBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500';
+        statusBadge.textContent = 'Empty Slot';
+        summaryDiv.textContent = `No saved state yet. Click "Save Current to Slot ${slotNumber}" to snapshot this pool.`;
+        btnLoad.disabled = true;
+        btnClear.disabled = true;
+      }
+    }
+
+    function initializeMatches() {
+      const schedule = POOL_SCHEDULES[state.poolSize];
+      state.matches = schedule.map(item => {
+        return {
+          id: `M${item.matchNum}`,
+          matchNum: item.matchNum,
+          teamAId: item.teamA,
+          teamBId: item.teamB,
+          refId: item.ref,
+          sets: [
+            { scoreA: '', scoreB: '' },
+            { scoreA: '', scoreB: '' },
+            { scoreA: '', scoreB: '' }
+          ]
+        };
+      });
+    }
+
+    function updateTeamLabels(teamId, displayName, shortName) {
+      document.querySelectorAll(`[data-team-label="${teamId}"]`).forEach(el => {
+        el.textContent = displayName;
+      });
+      document.querySelectorAll(`[data-team-title="${teamId}"]`).forEach(el => {
+        el.setAttribute('title', displayName);
+      });
+      document.querySelectorAll(`[data-ref-label="${teamId}"]`).forEach(el => {
+        el.textContent = `Ref: ${shortName}`;
+      });
+    }
+
+    function renderTeamInputs() {
+      const container = document.getElementById('teamInputGrid');
+      container.innerHTML = '';
+
+      const activeTeams = state.teams.slice(0, state.poolSize);
+      activeTeams.forEach((team, index) => {
+        const color = TEAM_COLORS[index];
+        const div = document.createElement('div');
+        div.className = 'flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 transition-colors';
+        div.innerHTML = `
+          <span class="w-6 h-6 rounded-lg ${color.bg} text-white font-bold text-xs flex items-center justify-center flex-shrink-0">
+            ${team.seed}
+          </span>
+          <div class="flex-grow min-w-0">
+            <input type="text" value="${escapeHtml(team.name)}" data-team-id="${team.id}" class="team-name-input w-full bg-white border border-slate-200 rounded px-2 py-1 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500" placeholder="Team ${team.seed} Name">
+          </div>
+        `;
+        container.appendChild(div);
+      });
+
+      container.querySelectorAll('.team-name-input').forEach(input => {
+        input.addEventListener('input', (e) => {
+          const tId = e.target.getAttribute('data-team-id');
+          const t = state.teams.find(item => item.id === tId);
+          if (t) {
+            t.name = e.target.value;
+            const effectiveName = t.name.trim() || `Team ${t.seed}`;
+            t.shortName = effectiveName.length > 16 ? effectiveName.substring(0, 14) + '...' : effectiveName;
+            updateTeamLabels(tId, effectiveName, t.shortName);
+            calculateAndRenderStandings();
+          }
+        });
+      });
+    }
+
+    function renderMatches() {
+      const container = document.getElementById('matchesContainer');
+      container.innerHTML = '';
+
+      const maxSets = state.matchFormat === '2sets' ? 2 : (state.matchFormat === 'best3of5' ? 5 : 3);
+      let completedMatchesCount = 0;
+
+      state.matches.forEach((match, mIdx) => {
+        const teamA = state.teams.find(t => t.id === match.teamAId);
+        const teamB = state.teams.find(t => t.id === match.teamBId);
+        const refTeam = state.teams.find(t => t.id === match.refId);
+
+        const colorA = TEAM_COLORS[state.teams.indexOf(teamA)];
+        const colorB = TEAM_COLORS[state.teams.indexOf(teamB)];
+
+        const matchResult = computeSingleMatchResult(match);
+        if (matchResult.isComplete) completedMatchesCount++;
+
+        let statusBadge = '';
+        if (matchResult.isComplete) {
+          statusBadge = `
+            <span class="px-2 py-0.5 rounded text-[10px] font-extrabold tracking-wide uppercase bg-emerald-100 text-emerald-800 border border-emerald-200">
+              Final: ${matchResult.setsA} - ${matchResult.setsB}
+            </span>
+          `;
+        } else if (matchResult.hasPartialScores) {
+          statusBadge = `
+            <span class="px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-amber-100 text-amber-800 border border-amber-200">
+              In Progress
+            </span>
+          `;
+        } else {
+          statusBadge = `
+            <span class="px-2 py-0.5 rounded text-[10px] font-medium uppercase bg-slate-100 text-slate-500">
+              Scheduled
+            </span>
+          `;
+        }
+
+        // Determine if Set 3 is disabled (ONLY if match was already swept 2-0)
+        let set3Disabled = false;
+        if (state.matchFormat === 'best2of3') {
+          const s1 = match.sets[0];
+          const s2 = match.sets[1];
+          const s1Done = isSetComplete(s1?.scoreA, s1?.scoreB, 25);
+          const s2Done = isSetComplete(s2?.scoreA, s2?.scoreB, 25);
+          if (s1Done && s2Done) {
+            const w1 = Number(s1.scoreA) > Number(s1.scoreB) ? 'A' : 'B';
+            const w2 = Number(s2.scoreA) > Number(s2.scoreB) ? 'A' : 'B';
+            if (w1 === w2) {
+              set3Disabled = true;
+            }
+          }
+        }
+
+        const card = document.createElement('div');
+        card.className = `border rounded-2xl p-4 transition-all ${matchResult.isComplete ? 'bg-white border-slate-200 shadow-xs' : 'bg-slate-50/80 border-slate-200'}`;
+
+        let headerCols = '';
+        for (let s = 0; s < maxSets; s++) {
+          const isDeciding = (state.matchFormat === 'best2of3' && s === 2) || (state.matchFormat === 'best3of5' && s === 4);
+          headerCols += `<th class="w-14 text-center py-1 text-[11px] font-bold text-slate-500 uppercase">Set ${s + 1}${isDeciding ? ' <span class="text-[9px] text-amber-600">(15)</span>' : ''}</th>`;
+        }
+
+        function getSetWinner(sIdx) {
+          const sObj = match.sets[sIdx];
+          if (!sObj) return null;
+          const target = (state.matchFormat === 'best2of3' && sIdx === 2) || (state.matchFormat === 'best3of5' && sIdx === 4) ? 15 : 25;
+          if (isSetComplete(sObj.scoreA, sObj.scoreB, target)) {
+            return Number(sObj.scoreA) > Number(sObj.scoreB) ? 'A' : 'B';
+          }
+          return null;
+        }
+
+        let cellsRowA = '';
+        let cellsRowB = '';
+
+        for (let s = 0; s < maxSets; s++) {
+          const sObj = match.sets[s] || { scoreA: '', scoreB: '' };
+          const sWinner = getSetWinner(s);
+          const isS3 = (state.matchFormat === 'best2of3' && s === 2);
+          const isDisabled = isS3 && set3Disabled;
+
+          const valA = isDisabled ? '' : (sObj.scoreA ?? '');
+          const valB = isDisabled ? '' : (sObj.scoreB ?? '');
+
+          const highlightA = sWinner === 'A' ? 'bg-emerald-50 border-emerald-500 font-extrabold text-emerald-800' : 'bg-white border-slate-200 text-slate-800';
+          const highlightB = sWinner === 'B' ? 'bg-emerald-50 border-emerald-500 font-extrabold text-emerald-800' : 'bg-white border-slate-200 text-slate-800';
+
+          cellsRowA += `
+            <td class="text-center p-1">
+              <input type="number" min="0" max="60" 
+                value="${valA}" 
+                data-match-idx="${mIdx}" 
+                data-set-idx="${s}" 
+                data-team="A" 
+                ${isDisabled ? 'disabled placeholder="-"' : 'placeholder="0"'} 
+                class="score-input w-12 h-9 text-center font-mono-num font-bold text-xs border rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all ${isDisabled ? 'bg-slate-100 text-slate-300 cursor-not-allowed border-slate-200' : highlightA}">
+            </td>
+          `;
+
+          cellsRowB += `
+            <td class="text-center p-1">
+              <input type="number" min="0" max="60" 
+                value="${valB}" 
+                data-match-idx="${mIdx}" 
+                data-set-idx="${s}" 
+                data-team="B" 
+                ${isDisabled ? 'disabled placeholder="-"' : 'placeholder="0"'} 
+                class="score-input w-12 h-9 text-center font-mono-num font-bold text-xs border rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all ${isDisabled ? 'bg-slate-100 text-slate-300 cursor-not-allowed border-slate-200' : highlightB}">
+            </td>
+          `;
+        }
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">Match #${match.matchNum}</span>
+              ${refTeam ? `<span data-ref-label="${refTeam.id}" class="text-[11px] text-slate-400">Ref: ${escapeHtml(refTeam.shortName || refTeam.name)}</span>` : ''}
+              ${set3Disabled ? '<span class="text-[10px] text-slate-400 font-medium italic">Set 3 not needed (2-0 sweep)</span>' : ''}
+            </div>
+            ${statusBadge}
+          </div>
+
+          <!-- Stacked Scoreboard Table -->
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-slate-100">
+                  <th class="py-1 text-[11px] font-bold text-slate-400 uppercase">Team</th>
+                  ${headerCols}
+                  <th class="w-12 text-center py-1 text-[11px] font-bold text-slate-500 uppercase">Sets</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y border-b border-slate-100 divide-slate-100">
+                <!-- Team A Row -->
+                <tr class="${matchResult.winner === 'A' ? 'bg-emerald-50/30' : ''}">
+                  <td class="py-2 pr-2">
+                    <div class="flex items-center justify-between gap-2">
+                      <div class="flex items-center gap-2 min-w-0">
+                        <span class="w-4 h-4 rounded text-[10px] font-bold text-white ${colorA.bg} flex items-center justify-center flex-shrink-0">${teamA.seed}</span>
+                        <span data-team-label="${teamA.id}" data-team-title="${teamA.id}" class="font-bold text-xs text-slate-900 truncate max-w-[140px] sm:max-w-[200px]" title="${escapeHtml(teamA.name)}">${escapeHtml(teamA.name)}</span>
+                      </div>
+                      ${matchResult.winner === 'A' ? '<span class="text-[11px] font-bold text-emerald-600 bg-emerald-100 px-1.5 py-0.2 rounded">WIN</span>' : ''}
+                    </div>
+                  </td>
+                  ${cellsRowA}
+                  <td class="text-center font-mono-num font-extrabold text-xs ${matchResult.winner === 'A' ? 'text-emerald-700 text-sm' : 'text-slate-700'}">
+                    ${matchResult.setsA}
+                  </td>
+                </tr>
+
+                <!-- Team B Row -->
+                <tr class="${matchResult.winner === 'B' ? 'bg-emerald-50/30' : ''}">
+                  <td class="py-2 pr-2">
+                    <div class="flex items-center justify-between gap-2">
+                      <div class="flex items-center gap-2 min-w-0">
+                        <span class="w-4 h-4 rounded text-[10px] font-bold text-white ${colorB.bg} flex items-center justify-center flex-shrink-0">${teamB.seed}</span>
+                        <span data-team-label="${teamB.id}" data-team-title="${teamB.id}" class="font-bold text-xs text-slate-900 truncate max-w-[140px] sm:max-w-[200px]" title="${escapeHtml(teamB.name)}">${escapeHtml(teamB.name)}</span>
+                      </div>
+                      ${matchResult.winner === 'B' ? '<span class="text-[11px] font-bold text-emerald-600 bg-emerald-100 px-1.5 py-0.2 rounded">WIN</span>' : ''}
+                    </div>
+                  </td>
+                  ${cellsRowB}
+                  <td class="text-center font-mono-num font-extrabold text-xs ${matchResult.winner === 'B' ? 'text-emerald-700 text-sm' : 'text-slate-700'}">
+                    ${matchResult.setsB}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+
+      const totalMatches = state.matches.length;
+      const progressBadge = document.getElementById('matchProgressBadge');
+      progressBadge.textContent = `${completedMatchesCount} / ${totalMatches} Matches Complete`;
+      if (completedMatchesCount === totalMatches && totalMatches > 0) {
+        progressBadge.className = 'text-xs px-2.5 py-1 rounded-full font-bold bg-emerald-50 text-emerald-700 border border-emerald-200';
+      } else {
+        progressBadge.className = 'text-xs px-2.5 py-1 rounded-full font-semibold bg-amber-50 text-amber-700 border border-amber-200';
+      }
+
+      container.querySelectorAll('.score-input').forEach(input => {
+        input.addEventListener('input', (e) => {
+          const mIdx = parseInt(e.target.getAttribute('data-match-idx'), 10);
+          const sIdx = parseInt(e.target.getAttribute('data-set-idx'), 10);
+          const teamSide = e.target.getAttribute('data-team');
+          const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10));
+
+          if (!state.matches[mIdx].sets[sIdx]) {
+            state.matches[mIdx].sets[sIdx] = { scoreA: '', scoreB: '' };
+          }
+
+          if (teamSide === 'A') {
+            state.matches[mIdx].sets[sIdx].scoreA = val;
+          } else {
+            state.matches[mIdx].sets[sIdx].scoreB = val;
+          }
+
+          updateDecidingSetState(mIdx);
+          calculateAndRenderStandings();
+        });
+
+        input.addEventListener('focus', function() {
+          this.select();
+        });
+      });
+    }
+
+    function updateDecidingSetState(mIdx) {
+      if (state.matchFormat !== 'best2of3') return;
+      const match = state.matches[mIdx];
+      const s1 = match.sets[0];
+      const s2 = match.sets[1];
+      const s1Done = isSetComplete(s1?.scoreA, s1?.scoreB, 25);
+      const s2Done = isSetComplete(s2?.scoreA, s2?.scoreB, 25);
+
+      let swept = false;
+      if (s1Done && s2Done) {
+        const w1 = Number(s1.scoreA) > Number(s1.scoreB) ? 'A' : 'B';
+        const w2 = Number(s2.scoreA) > Number(s2.scoreB) ? 'A' : 'B';
+        if (w1 === w2) swept = true;
+      }
+
+      const s3Inputs = document.querySelectorAll(`.score-input[data-match-idx="${mIdx}"][data-set-idx="2"]`);
+      s3Inputs.forEach(input => {
+        input.disabled = swept;
+        if (swept) {
+          input.value = '';
+          input.placeholder = '-';
+          input.className = 'score-input w-12 h-9 text-center font-mono-num font-bold text-xs border rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all bg-slate-100 text-slate-300 cursor-not-allowed border-slate-200';
+        } else {
+          input.placeholder = '0';
+          input.className = 'score-input w-12 h-9 text-center font-mono-num font-bold text-xs border rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all bg-white border-slate-200 text-slate-800';
+        }
+      });
+    }
+
+    function analyzeFinalMatchScenarios() {
+      const activeTeams = state.teams.slice(0, state.poolSize);
+      const incompleteMatches = state.matches.filter(m => !computeSingleMatchResult(m).isComplete);
+
+      if (incompleteMatches.length !== 1) {
+        return null;
+      }
+
+      const finalMatch = incompleteMatches[0];
+      const teamA = state.teams.find(t => t.id === finalMatch.teamAId);
+      const teamB = state.teams.find(t => t.id === finalMatch.teamBId);
+
+      let possibleOutcomes = [];
+      if (state.matchFormat === '2sets') {
+        possibleOutcomes = [
+          { label: `${teamA.shortName || teamA.name} wins 2-0`, sets: [{ scoreA: 25, scoreB: 20 }, { scoreA: 25, scoreB: 20 }] },
+          { label: `Split 1-1 (${teamA.shortName} 1, ${teamB.shortName} 1)`, sets: [{ scoreA: 25, scoreB: 20 }, { scoreA: 20, scoreB: 25 }] },
+          { label: `${teamB.shortName || teamB.name} wins 2-0`, sets: [{ scoreA: 20, scoreB: 25 }, { scoreA: 20, scoreB: 25 }] }
+        ];
+      } else {
+        possibleOutcomes = [
+          { key: 'A_2_0', label: `${teamA.shortName || teamA.name} wins 2-0`, tag: '2-0', sets: [{ scoreA: 25, scoreB: 20 }, { scoreA: 25, scoreB: 20 }, { scoreA: '', scoreB: '' }] },
+          { key: 'A_2_1', label: `${teamA.shortName || teamA.name} wins 2-1`, tag: '2-1', sets: [{ scoreA: 25, scoreB: 20 }, { scoreA: 20, scoreB: 25 }, { scoreA: 15, scoreB: 12 }] },
+          { key: 'B_2_1', label: `${teamB.shortName || teamB.name} wins 2-1`, tag: '1-2', sets: [{ scoreA: 20, scoreB: 25 }, { scoreA: 25, scoreB: 20 }, { scoreA: 12, scoreB: 15 }] },
+          { key: 'B_2_0', label: `${teamB.shortName || teamB.name} wins 2-0`, tag: '0-2', sets: [{ scoreA: 20, scoreB: 25 }, { scoreA: 20, scoreB: 25 }, { scoreA: '', scoreB: '' }] }
+        ];
+      }
+
+      const outcomeResults = possibleOutcomes.map(outcome => {
+        const simMatches = state.matches.map(m => {
+          if (m.id === finalMatch.id) {
+            return {
+              ...m,
+              sets: outcome.sets.map(s => ({ ...s }))
+            };
+          }
+          return {
+            ...m,
+            sets: m.sets.map(s => ({ ...s }))
+          };
+        });
+
+        const originalMatches = state.matches;
+        state.matches = simMatches;
+        const simStats = calculatePoolStats();
+        const { rankedList } = resolvePoolRanks(simStats);
+        state.matches = originalMatches;
+
+        const teamRanks = {};
+        rankedList.forEach((item, idx) => {
+          teamRanks[item.team.id] = idx + 1;
+        });
+
+        return {
+          outcome,
+          rankedList,
+          teamRanks
+        };
+      });
+
+      const teamRequirements = activeTeams.map(t => {
+        const ranksAchievable = {};
+        outcomeResults.forEach(res => {
+          const rank = res.teamRanks[t.id];
+          if (!ranksAchievable[rank]) ranksAchievable[rank] = [];
+          ranksAchievable[rank].push(res.outcome.label);
+        });
+
+        const descriptions = [];
+        for (let r = 1; r <= activeTeams.length; r++) {
+          if (ranksAchievable[r]) {
+            if (ranksAchievable[r].length === outcomeResults.length) {
+              descriptions.push({ rank: r, text: `<strong class="text-indigo-600">Locked in #${r}</strong> (outcome of Match #${finalMatch.matchNum} will not change this rank).` });
+            } else {
+              descriptions.push({ rank: r, text: `Finishes <strong class="text-slate-900">#${r}</strong> if: ${ranksAchievable[r].join(' OR ')}.` });
+            }
+          }
+        }
+
+        return {
+          team: t,
+          descriptions,
+          ranksAchievable
+        };
+      });
+
+      return {
+        finalMatch,
+        teamA,
+        teamB,
+        outcomeResults,
+        teamRequirements
+      };
+    }
+
+    function renderScenarioAnalysis() {
+      const card = document.getElementById('finalMatchScenarioCard');
+      const analysis = analyzeFinalMatchScenarios();
+
+      if (!analysis) {
+        card.classList.add('hidden');
+        card.innerHTML = '';
+        return;
+      }
+
+      card.classList.remove('hidden');
+
+      const { finalMatch, teamA, teamB, outcomeResults, teamRequirements } = analysis;
+
+      let matrixHeaders = '<th class="p-2.5 text-left text-[11px] font-bold text-slate-600 uppercase bg-slate-100">Possible Result</th>';
+      state.teams.slice(0, state.poolSize).forEach(t => {
+        matrixHeaders += `<th class="p-2.5 text-center text-[11px] font-bold text-slate-700 uppercase bg-slate-100">${escapeHtml(t.shortName || t.name)}</th>`;
+      });
+      matrixHeaders += '<th class="p-2.5 text-center text-[11px] font-bold text-slate-500 uppercase bg-slate-100">Action</th>';
+
+      let matrixRows = '';
+      outcomeResults.forEach((res, idx) => {
+        let cells = `<td class="p-2.5 font-bold text-xs text-slate-800 border-b border-slate-100">${escapeHtml(res.outcome.label)}</td>`;
+        state.teams.slice(0, state.poolSize).forEach(t => {
+          const r = res.teamRanks[t.id];
+          let badge = '';
+          if (r === 1) badge = '<span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-400 text-slate-900 font-extrabold text-xs shadow-xs">1st</span>';
+          else if (r === 2) badge = '<span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-300 text-slate-800 font-extrabold text-xs shadow-xs">2nd</span>';
+          else if (r === 3) badge = '<span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-700 text-amber-100 font-bold text-xs">3rd</span>';
+          else badge = '<span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-500 font-medium text-xs">4th</span>';
+          cells += `<td class="p-2.5 text-center border-b border-slate-100">${badge}</td>`;
+        });
+
+        cells += `
+          <td class="p-2.5 text-center border-b border-slate-100">
+            <button onclick="applySimulatedOutcome(${idx})" class="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg transition-colors">
+              ⚡ Test Score
+            </button>
+          </td>
+        `;
+        matrixRows += `<tr class="hover:bg-indigo-50/30 transition-colors">${cells}</tr>`;
+      });
+
+      let teamReqsHtml = '';
+      teamRequirements.forEach(tr => {
+        const color = TEAM_COLORS[state.teams.indexOf(tr.team)];
+        teamReqsHtml += `
+          <div class="p-3 bg-white border border-slate-200 rounded-xl shadow-xs space-y-1.5">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="w-3 h-3 rounded-full ${color.bg}"></span>
+              <h4 class="font-bold text-xs text-slate-900">${escapeHtml(tr.team.name)}</h4>
+            </div>
+            <div class="space-y-1 text-xs text-slate-600">
+              ${tr.descriptions.map(d => `<div class="pl-2 border-l-2 border-indigo-200">${d.text}</div>`).join('')}
+            </div>
+          </div>
+        `;
+      });
+
+      card.innerHTML = `
+        <div class="bg-gradient-to-br from-indigo-900 via-indigo-800 to-slate-900 text-white p-5 rounded-2xl shadow-md border border-indigo-700">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-3 pb-3 border-b border-indigo-700/60">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-xl bg-amber-400 text-slate-900 font-black text-lg flex items-center justify-center shadow">
+                🎯
+              </div>
+              <div>
+                <h3 class="text-sm font-extrabold tracking-tight text-white flex items-center gap-2">
+                  Final Match Remaining: Match #${finalMatch.matchNum} (${escapeHtml(teamA.shortName || teamA.name)} vs ${escapeHtml(teamB.shortName || teamB.name)})
+                </h3>
+                <p class="text-xs text-indigo-200">What is needed for each team to finish in each rank</p>
+              </div>
+            </div>
+            <span class="text-[11px] font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30 px-2.5 py-1 rounded-full">
+              Automated Tie-Break Scenarios
+            </span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 my-4 text-slate-800">
+            ${teamReqsHtml}
+          </div>
+
+          <div class="bg-white rounded-xl overflow-hidden text-slate-800 shadow-sm border border-slate-200 mt-3">
+            <div class="px-4 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+              <span class="text-xs font-bold text-slate-700 uppercase tracking-wider">Final Outcome Simulation Matrix</span>
+              <span class="text-[11px] text-slate-500">Click "Test Score" to preview live standings</span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr>${matrixHeaders}</tr>
+                </thead>
+                <tbody>
+                  ${matrixRows}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    window.applySimulatedOutcome = function(outcomeIndex) {
+      const analysis = analyzeFinalMatchScenarios();
+      if (!analysis || !analysis.outcomeResults[outcomeIndex]) return;
+
+      const simOutcome = analysis.outcomeResults[outcomeIndex].outcome;
+      const finalMatch = analysis.finalMatch;
+
+      finalMatch.sets = simOutcome.sets.map(s => ({ ...s }));
+      renderAll();
+      showToast(`Applied: ${simOutcome.label}`);
+    };
+
+    function isSetComplete(scoreA, scoreB, target = 25) {
+      if (scoreA === '' || scoreB === '' || scoreA === null || scoreB === null || scoreA === undefined || scoreB === undefined) {
+        return false;
+      }
+      const a = Number(scoreA);
+      const b = Number(scoreB);
+      if (isNaN(a) || isNaN(b)) return false;
+      const maxScore = Math.max(a, b);
+      const diff = Math.abs(a - b);
+      return maxScore >= target && diff >= 2;
+    }
+
+    function computeSingleMatchResult(match) {
+      const maxSets = state.matchFormat === '2sets' ? 2 : (state.matchFormat === 'best3of5' ? 5 : 3);
+      const winTargetSets = state.matchFormat === 'best3of5' ? 3 : 2;
+      
+      let setsA = 0;
+      let setsB = 0;
+      let pointsA = 0;
+      let pointsB = 0;
+      let completedSets = 0;
+      let hasPartialScores = false;
+
+      for (let i = 0; i < maxSets; i++) {
+        const s = match.sets[i];
+        if (!s) continue;
+        const target = (state.matchFormat === 'best2of3' && i === 2) || (state.matchFormat === 'best3of5' && i === 4) ? 15 : 25;
+        
+        if (s.scoreA !== '' || s.scoreB !== '') {
+          hasPartialScores = true;
+        }
+        
+        if (isSetComplete(s.scoreA, s.scoreB, target)) {
+          const a = Number(s.scoreA);
+          const b = Number(s.scoreB);
+          pointsA += a;
+          pointsB += b;
+          completedSets++;
+          if (a > b) setsA++;
+          else setsB++;
+        }
+      }
+
+      let isComplete = false;
+      let winner = null;
+
+      if (state.matchFormat === '2sets') {
+        if (completedSets === 2) {
+          isComplete = true;
+          if (setsA > setsB) winner = 'A';
+          else if (setsB > setsA) winner = 'B';
+          else winner = 'TIE';
+        }
+      } else {
+        if (setsA >= winTargetSets) {
+          isComplete = true;
+          winner = 'A';
+        } else if (setsB >= winTargetSets) {
+          isComplete = true;
+          winner = 'B';
+        }
+      }
+
+      return {
+        isComplete,
+        hasPartialScores,
+        setsA,
+        setsB,
+        pointsA,
+        pointsB,
+        winner,
+        completedSets
+      };
+    }
+
+    function calculatePoolStats() {
+      const activeTeams = state.teams.slice(0, state.poolSize);
+      const stats = {};
+
+      activeTeams.forEach(team => {
+        stats[team.id] = {
+          team: team,
+          matchesWon: 0,
+          matchesLost: 0,
+          matchesTied: 0,
+          matchesPlayed: 0,
+          setsWon: 0,
+          setsLost: 0,
+          pointsWon: 0,
+          pointsLost: 0,
+          matchPct: 0,
+          setRatio: 0,
+          setPct: 0,
+          pointRatio: 0,
+          pointPct: 0
+        };
+      });
+
+      state.matches.forEach(match => {
+        const teamA = stats[match.teamAId];
+        const teamB = stats[match.teamBId];
+        if (!teamA || !teamB) return;
+
+        const maxSets = state.matchFormat === '2sets' ? 2 : (state.matchFormat === 'best3of5' ? 5 : 3);
+
+        let mSetsA = 0;
+        let mSetsB = 0;
+        let mPtsA = 0;
+        let mPtsB = 0;
+
+        for (let i = 0; i < maxSets; i++) {
+          const s = match.sets[i];
+          if (!s) continue;
+          const target = (state.matchFormat === 'best2of3' && i === 2) || (state.matchFormat === 'best3of5' && i === 4) ? 15 : 25;
+          if (isSetComplete(s.scoreA, s.scoreB, target)) {
+            const a = Number(s.scoreA);
+            const b = Number(s.scoreB);
+            mPtsA += a;
+            mPtsB += b;
+            if (a > b) mSetsA++;
+            else mSetsB++;
+          }
+        }
+
+        teamA.setsWon += mSetsA;
+        teamA.setsLost += mSetsB;
+        teamA.pointsWon += mPtsA;
+        teamA.pointsLost += mPtsB;
+
+        teamB.setsWon += mSetsB;
+        teamB.setsLost += mSetsA;
+        teamB.pointsWon += mPtsB;
+        teamB.pointsLost += mPtsA;
+
+        const res = computeSingleMatchResult(match);
+        if (res.isComplete) {
+          teamA.matchesPlayed++;
+          teamB.matchesPlayed++;
+
+          if (res.winner === 'A') {
+            teamA.matchesWon++;
+            teamB.matchesLost++;
+          } else if (res.winner === 'B') {
+            teamB.matchesWon++;
+            teamA.matchesLost++;
+          } else {
+            teamA.matchesTied++;
+            teamB.matchesTied++;
+          }
+        }
+      });
+
+      Object.values(stats).forEach(s => {
+        s.matchPct = s.matchesPlayed > 0 ? (s.matchesWon / s.matchesPlayed) : 0;
+        const totalSets = s.setsWon + s.setsLost;
+        s.setPct = totalSets > 0 ? (s.setsWon / totalSets) : 0;
+        s.setRatio = s.setsLost > 0 ? (s.setsWon / s.setsLost) : (s.setsWon > 0 ? 999 : 0);
+        const totalPts = s.pointsWon + s.pointsLost;
+        s.pointPct = totalPts > 0 ? (s.pointsWon / totalPts) : 0;
+        s.pointRatio = s.pointsLost > 0 ? (s.pointsWon / s.pointsLost) : (s.pointsWon > 0 ? 999 : 0);
+      });
+
+      return stats;
+    }
+
+    function resolvePoolRanks(stats) {
+      const activeTeams = state.teams.slice(0, state.poolSize);
+      const auditLog = [];
+
+      let groups = [activeTeams.map(t => stats[t.id])];
+      
+      auditLog.push({
+        step: 'Step 1: Match Winning Percentage',
+        description: 'Comparing matches won to total matches played for all pool teams.'
+      });
+
+      let nextGroups = [];
+      groups.forEach(group => {
+        const sorted = [...group].sort((a, b) => b.matchPct - a.matchPct);
+        const subgroups = splitByMetric(sorted, item => item.matchPct.toFixed(4));
+        nextGroups.push(...subgroups);
+      });
+      groups = nextGroups;
+
+      const finalRanked = [];
+
+      for (let i = 0; i < groups.length; i++) {
+        const tiedGroup = groups[i];
+        if (tiedGroup.length === 1) {
+          finalRanked.push(tiedGroup[0]);
+          continue;
+        }
+
+        if (tiedGroup.length === 2) {
+          const tA = tiedGroup[0];
+          const tB = tiedGroup[1];
+          const h2h = getHeadToHead(tA.team.id, tB.team.id);
+
+          auditLog.push({
+            step: `2-Way Tie (${tA.team.name} & ${tB.team.name})`,
+            description: `Both teams tied at match % ${(tA.matchPct * 100).toFixed(1)}% (${tA.matchesWon}-${tA.matchesLost}). Checking Head-to-Head.`
+          });
+
+          if (h2h.winner === tA.team.id) {
+            auditLog.push({
+              step: 'Head-to-Head Winner',
+              description: `✓ ${tA.team.name} defeated ${tB.team.name} (${h2h.setsA}-${h2h.setsB}). ${tA.team.name} wins tie-break.`
+            });
+            finalRanked.push(tA, tB);
+          } else if (h2h.winner === tB.team.id) {
+            auditLog.push({
+              step: 'Head-to-Head Winner',
+              description: `✓ ${tB.team.name} defeated ${tA.team.name} (${h2h.setsB}-${h2h.setsA}). ${tB.team.name} wins tie-break.`
+            });
+            finalRanked.push(tB, tA);
+          } else {
+            auditLog.push({
+              step: 'H2H Sets Deadlocked',
+              description: `Head-to-head match is split or not completed. Comparing Overall Set % (USAV Rule).`
+            });
+            if (tA.setPct !== tB.setPct) {
+              const winner = tA.setPct > tB.setPct ? tA : tB;
+              const loser = winner === tA ? tB : tA;
+              auditLog.push({
+                step: 'Overall Set % Decision',
+                description: `✓ ${winner.team.name} has superior Set % (${(winner.setPct * 100).toFixed(1)}% vs ${(loser.setPct * 100).toFixed(1)}%).`
+              });
+              finalRanked.push(winner, loser);
+            } else if (tA.pointPct !== tB.pointPct) {
+              const winner = tA.pointPct > tB.pointPct ? tA : tB;
+              const loser = winner === tA ? tB : tA;
+              auditLog.push({
+                step: 'Overall Point % Decision',
+                description: `✓ ${winner.team.name} has superior Point % (${(winner.pointPct * 100).toFixed(2)}% vs ${(loser.pointPct * 100).toFixed(2)}%).`
+              });
+              finalRanked.push(winner, loser);
+            } else {
+              const winner = tA.team.seed < tB.team.seed ? tA : tB;
+              const loser = winner === tA ? tB : tA;
+              auditLog.push({
+                step: 'Seed / Coin Flip',
+                description: `All metrics equal. Resolved by tournament seed: ${winner.team.name} seeded higher.`
+              });
+              finalRanked.push(winner, loser);
+            }
+          }
+        } 
+        else if (tiedGroup.length >= 3) {
+          auditLog.push({
+            step: `${tiedGroup.length}-Way Tie Detected`,
+            description: `Teams tied at match record (${tiedGroup[0].matchesWon}-${tiedGroup[0].matchesLost}). Applying USAV Rule: Set % in matches between tied teams.`
+          });
+
+          const resolvedTies = resolveMultiTeamTie(tiedGroup, auditLog);
+          finalRanked.push(...resolvedTies);
+        }
+      }
+
+      return {
+        rankedList: finalRanked,
+        auditLog
+      };
+    }
+
+    function splitByMetric(array, keyFn) {
+      const groups = [];
+      let currentGroup = [];
+      let currentKey = null;
+
+      array.forEach(item => {
+        const key = keyFn(item);
+        if (currentKey === null || key === currentKey) {
+          currentGroup.push(item);
+          currentKey = key;
+        } else {
+          groups.push(currentGroup);
+          currentGroup = [item];
+          currentKey = key;
+        }
+      });
+      if (currentGroup.length > 0) groups.push(currentGroup);
+      return groups;
+    }
+
+    function getHeadToHead(teamAId, teamBId) {
+      const match = state.matches.find(m => 
+        (m.teamAId === teamAId && m.teamBId === teamBId) ||
+        (m.teamAId === teamBId && m.teamBId === teamAId)
+      );
+
+      if (!match) return { winner: null, setsA: 0, setsB: 0, pointsA: 0, pointsB: 0 };
+
+      const isReverse = match.teamAId === teamBId;
+      const res = computeSingleMatchResult(match);
+
+      const setsA = isReverse ? res.setsB : res.setsA;
+      const setsB = isReverse ? res.setsA : res.setsB;
+      const pointsA = isReverse ? res.pointsB : res.pointsA;
+      const pointsB = isReverse ? res.pointsA : res.pointsB;
+
+      let winner = null;
+      if (res.isComplete) {
+        if (setsA > setsB) winner = teamAId;
+        else if (setsB > setsA) winner = teamBId;
+      }
+
+      return { winner, setsA, setsB, pointsA, pointsB, isComplete: res.isComplete };
+    }
+
+    function resolveMultiTeamTie(tiedTeams, auditLog) {
+      const tiedTeamIds = new Set(tiedTeams.map(t => t.team.id));
+
+      const miniStats = {};
+      tiedTeams.forEach(t => {
+        miniStats[t.team.id] = {
+          item: t,
+          setsWon: 0,
+          setsLost: 0,
+          pointsWon: 0,
+          pointsLost: 0
+        };
+      });
+
+      state.matches.forEach(m => {
+        if (tiedTeamIds.has(m.teamAId) && tiedTeamIds.has(m.teamBId)) {
+          const maxSets = state.matchFormat === '2sets' ? 2 : (state.matchFormat === 'best3of5' ? 5 : 3);
+          for (let s = 0; s < maxSets; s++) {
+            const setObj = m.sets[s];
+            if (!setObj) continue;
+            const target = (state.matchFormat === 'best2of3' && s === 2) || (state.matchFormat === 'best3of5' && s === 4) ? 15 : 25;
+            if (isSetComplete(setObj.scoreA, setObj.scoreB, target)) {
+              const a = Number(setObj.scoreA);
+              const b = Number(setObj.scoreB);
+              miniStats[m.teamAId].pointsWon += a;
+              miniStats[m.teamAId].pointsLost += b;
+              miniStats[m.teamBId].pointsWon += b;
+              miniStats[m.teamBId].pointsLost += a;
+              if (a > b) {
+                miniStats[m.teamAId].setsWon++;
+                miniStats[m.teamBId].setsLost++;
+              } else {
+                miniStats[m.teamBId].setsWon++;
+                miniStats[m.teamAId].setsLost++;
+              }
+            }
+          }
+        }
+      });
+
+      Object.values(miniStats).forEach(ms => {
+        const totalSets = ms.setsWon + ms.setsLost;
+        ms.setPct = totalSets > 0 ? ms.setsWon / totalSets : 0;
+        const totalPts = ms.pointsWon + ms.pointsLost;
+        ms.pointPct = totalPts > 0 ? ms.pointsWon / totalPts : 0;
+      });
+
+      const miniSummary = Object.values(miniStats).map(ms => 
+        `${ms.item.team.name}: Set % ${(ms.setPct * 100).toFixed(1)}% (${ms.setsWon}/${ms.setsWon + ms.setsLost}), Pt % ${(ms.pointPct * 100).toFixed(2)}%`
+      ).join(' | ');
+      auditLog.push({
+        step: 'Head-to-Head Subset Analysis',
+        description: miniSummary
+      });
+
+      const sortedBySetPct = Object.values(miniStats).sort((a, b) => b.setPct - a.setPct);
+      const setPctGroups = splitByMetric(sortedBySetPct, x => x.setPct.toFixed(4));
+
+      if (setPctGroups.length === tiedTeams.length) {
+        auditLog.push({
+          step: 'Tie Broken by H2H Set %',
+          description: `All tied teams separated strictly by set percentage among tied teams.`
+        });
+        return sortedBySetPct.map(x => x.item);
+      }
+
+      if (setPctGroups.length > 1) {
+        auditLog.push({
+          step: 'Partial Separation by H2H Set %',
+          description: `Set % resolved one or more positions. Breaking remaining tied teams.`
+        });
+        const result = [];
+        setPctGroups.forEach(sub => {
+          if (sub.length === 1) {
+            result.push(sub[0].item);
+          } else if (sub.length === 2) {
+            const t1 = sub[0].item;
+            const t2 = sub[1].item;
+            const h2h = getHeadToHead(t1.team.id, t2.team.id);
+            if (h2h.winner === t1.team.id) {
+              auditLog.push({
+                step: 'Head-to-Head Followup',
+                description: `✓ ${t1.team.name} defeated ${t2.team.name} in direct match.`
+              });
+              result.push(t1, t2);
+            } else {
+              auditLog.push({
+                step: 'Head-to-Head Followup',
+                description: `✓ ${t2.team.name} defeated ${t1.team.name} in direct match.`
+              });
+              result.push(t2, t1);
+            }
+          }
+        });
+        return result;
+      }
+
+      auditLog.push({
+        step: 'Set % Deadlocked -> Comparing H2H Point %',
+        description: `All tied teams have identical Set %. Applying USAV Point %: Total Points Won ÷ Total Points Played among tied teams.`
+      });
+
+      const sortedByPointPct = Object.values(miniStats).sort((a, b) => b.pointPct - a.pointPct);
+      const ptPctGroups = splitByMetric(sortedByPointPct, x => x.pointPct.toFixed(4));
+
+      if (ptPctGroups.length === tiedTeams.length) {
+        auditLog.push({
+          step: 'Tie Broken by H2H Point %',
+          description: `All tied teams cleanly separated by point ratio among tied teams.`
+        });
+        return sortedByPointPct.map(x => x.item);
+      }
+
+      if (ptPctGroups.length > 1) {
+        const result = [];
+        ptPctGroups.forEach(sub => {
+          if (sub.length === 1) {
+            result.push(sub[0].item);
+          } else if (sub.length === 2) {
+            const t1 = sub[0].item;
+            const t2 = sub[1].item;
+            const h2h = getHeadToHead(t1.team.id, t2.team.id);
+            if (h2h.winner === t1.team.id) {
+              result.push(t1, t2);
+            } else {
+              result.push(t2, t1);
+            }
+          }
+        });
+        return result;
+      }
+
+      auditLog.push({
+        step: 'Deadlock: Seed / Coin Flip',
+        description: `Set % and Point % are identical. Rank assigned based on initial tournament seeding.`
+      });
+      return tiedTeams.sort((a, b) => a.team.seed - b.team.seed);
+    }
+
+    function calculateAndRenderStandings() {
+      const stats = calculatePoolStats();
+      const { rankedList, auditLog } = resolvePoolRanks(stats);
+
+      const tableBody = document.getElementById('standingsTableBody');
+      tableBody.innerHTML = '';
+
+      rankedList.forEach((stat, index) => {
+        const rank = index + 1;
+        const color = TEAM_COLORS[state.teams.indexOf(stat.team)];
+        const isGoldAdvancer = rank <= 2;
+
+        let rankBadge = '';
+        if (rank === 1) {
+          rankBadge = `<span class="w-6 h-6 rounded-full bg-amber-400 text-slate-900 font-extrabold flex items-center justify-center text-xs shadow-xs mx-auto">1</span>`;
+        } else if (rank === 2) {
+          rankBadge = `<span class="w-6 h-6 rounded-full bg-slate-300 text-slate-800 font-extrabold flex items-center justify-center text-xs shadow-xs mx-auto">2</span>`;
+        } else if (rank === 3) {
+          rankBadge = `<span class="w-6 h-6 rounded-full bg-amber-700 text-amber-100 font-extrabold flex items-center justify-center text-xs shadow-xs mx-auto">3</span>`;
+        } else {
+          rankBadge = `<span class="w-6 h-6 rounded-full bg-slate-100 text-slate-500 font-bold flex items-center justify-center text-xs mx-auto">4</span>`;
+        }
+
+        const tr = document.createElement('tr');
+        tr.className = `hover:bg-slate-50/80 transition-colors ${isGoldAdvancer ? 'bg-emerald-50/20' : ''}`;
+        
+        tr.innerHTML = `
+          <td class="py-3 px-3 text-center">
+            ${rankBadge}
+          </td>
+          <td class="py-3 px-3 font-semibold text-slate-900">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full ${color.bg}"></span>
+              <div>
+                <div class="flex items-center gap-1.5">
+                  <span>${escapeHtml(stat.team.name)}</span>
+                  <span class="text-[10px] text-slate-400 font-mono">(#${stat.team.seed})</span>
+                </div>
+                <div class="text-[10px] font-normal ${isGoldAdvancer ? 'text-emerald-600 font-semibold' : 'text-slate-400'}">
+                  ${isGoldAdvancer ? '★ Gold Bracket Bound' : 'Silver Bracket'}
+                </div>
+              </div>
+            </div>
+          </td>
+          <td class="py-3 px-3 text-center font-mono-num font-bold text-slate-800">
+            ${stat.matchesWon} - ${stat.matchesLost}${stat.matchesTied > 0 ? ` - ${stat.matchesTied}` : ''}
+          </td>
+          <td class="py-3 px-3 text-center font-mono-num text-slate-700 font-semibold">
+            ${(stat.matchPct * 100).toFixed(1)}%
+          </td>
+          <td class="py-3 px-3 text-center font-mono-num text-slate-700">
+            <span class="text-emerald-700 font-bold">${stat.setsWon}</span> - <span class="text-rose-700 font-bold">${stat.setsLost}</span>
+          </td>
+          <td class="py-3 px-3 text-center font-mono-num font-semibold ${stat.setPct > 0.5 ? 'text-emerald-700' : 'text-slate-600'}">
+            ${(stat.setPct * 100).toFixed(1)}%
+          </td>
+          <td class="py-3 px-3 text-center font-mono-num text-slate-600 text-[11px]">
+            ${stat.pointsWon} - ${stat.pointsLost}
+            <span class="text-[10px] ${stat.pointsWon >= stat.pointsLost ? 'text-emerald-600' : 'text-rose-600'}">
+              (${stat.pointsWon - stat.pointsLost >= 0 ? '+' : ''}${stat.pointsWon - stat.pointsLost})
+            </span>
+          </td>
+          <td class="py-3 px-3 text-center font-mono-num font-semibold text-slate-800">
+            ${(stat.pointPct * 100).toFixed(2)}%
+          </td>
+        `;
+        tableBody.appendChild(tr);
+      });
+
+      renderAuditLog(auditLog);
+      renderCrossMatrix(stats);
+      renderScenarioAnalysis();
+    }
+
+    function renderAuditLog(auditLog) {
+      const container = document.getElementById('tieBreakAuditContainer');
+      container.innerHTML = '';
+
+      if (!auditLog || auditLog.length === 0) {
+        container.innerHTML = '<p class="text-slate-400 italic">No matches entered yet.</p>';
+        return;
+      }
+
+      auditLog.forEach((item, idx) => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'p-2.5 rounded-lg bg-slate-50 border border-slate-200/80 flex items-start gap-2.5';
+        itemDiv.innerHTML = `
+          <span class="w-5 h-5 rounded-md bg-indigo-100 text-indigo-700 font-bold text-[10px] flex items-center justify-center flex-shrink-0 mt-0.5">
+            ${idx + 1}
+          </span>
+          <div class="leading-relaxed">
+            <span class="font-bold text-slate-900 block">${escapeHtml(item.step)}</span>
+            <span class="text-slate-600">${escapeHtml(item.description)}</span>
+          </div>
+        `;
+        container.appendChild(itemDiv);
+      });
+    }
+
+    function renderCrossMatrix(stats) {
+      const table = document.getElementById('crossMatrixTable');
+      table.innerHTML = '';
+
+      const activeTeams = state.teams.slice(0, state.poolSize);
+
+      let thead = '<thead><tr class="bg-slate-100 text-[11px] text-slate-600 font-bold uppercase">';
+      thead += '<th class="p-2 border border-slate-200 text-left">Team</th>';
+      activeTeams.forEach(t => {
+        thead += `<th class="p-2 border border-slate-200">${escapeHtml(t.shortName || t.name)}</th>`;
+      });
+      thead += '</tr></thead>';
+
+      let tbody = '<tbody>';
+      activeTeams.forEach((rowTeam, rIdx) => {
+        tbody += `<tr class="hover:bg-slate-50 transition-colors">`;
+        tbody += `<td class="p-2 border border-slate-200 text-left font-bold text-slate-800 bg-slate-50/50">${escapeHtml(rowTeam.shortName || rowTeam.name)}</td>`;
+
+        activeTeams.forEach((colTeam, cIdx) => {
+          if (rowTeam.id === colTeam.id) {
+            tbody += `<td class="p-2 border border-slate-200 bg-slate-200/50 text-slate-400 font-mono text-center">—</td>`;
+          } else {
+            const h2h = getHeadToHead(rowTeam.id, colTeam.id);
+            if (!h2h.isComplete) {
+              tbody += `<td class="p-2 border border-slate-200 text-slate-400 text-center italic text-[11px]">pending</td>`;
+            } else {
+              const won = h2h.winner === rowTeam.id;
+              const badgeClass = won ? 'text-emerald-700 font-bold bg-emerald-50' : 'text-rose-600 bg-rose-50';
+              tbody += `
+                <td class="p-2 border border-slate-200 text-center font-mono ${badgeClass}">
+                  ${won ? 'W' : 'L'} (${h2h.setsA}-${h2h.setsB})
+                  <div class="text-[9px] text-slate-400">${h2h.pointsA}-${h2h.pointsB}</div>
+                </td>
+              `;
+            }
+          }
+        });
+        tbody += `</tr>`;
+      });
+      tbody += '</tbody>';
+
+      table.innerHTML = thead + tbody;
+    }
+
+    function loadPreset(scenario) {
+      if (scenario === 'empty') {
+        state.matches.forEach(m => {
+          m.sets = [{ scoreA: '', scoreB: '' }, { scoreA: '', scoreB: '' }, { scoreA: '', scoreB: '' }];
+        });
+        showToast('All scores cleared');
+        renderAll();
+        return;
+      }
+
+      if (state.poolSize === 4) {
+        if (scenario === 'one-left') {
+          state.matches[0].sets = [{ scoreA: 25, scoreB: 18 }, { scoreA: 25, scoreB: 20 }, { scoreA: '', scoreB: '' }];
+          state.matches[1].sets = [{ scoreA: 25, scoreB: 15 }, { scoreA: 25, scoreB: 19 }, { scoreA: '', scoreB: '' }];
+          state.matches[2].sets = [{ scoreA: 25, scoreB: 12 }, { scoreA: 25, scoreB: 16 }, { scoreA: '', scoreB: '' }];
+          state.matches[3].sets = [{ scoreA: 25, scoreB: 22 }, { scoreA: 25, scoreB: 23 }, { scoreA: '', scoreB: '' }];
+          state.matches[4].sets = [{ scoreA: 25, scoreB: 19 }, { scoreA: 25, scoreB: 21 }, { scoreA: '', scoreB: '' }];
+          state.matches[5].sets = [{ scoreA: '', scoreB: '' }, { scoreA: '', scoreB: '' }, { scoreA: '', scoreB: '' }];
+          showToast('Loaded scenario with only Match #6 remaining!');
+        } else if (scenario === 'clear') {
+          state.matches[0].sets = [{ scoreA: 25, scoreB: 18 }, { scoreA: 25, scoreB: 20 }, { scoreA: '', scoreB: '' }];
+          state.matches[1].sets = [{ scoreA: 20, scoreB: 25 }, { scoreA: 23, scoreB: 25 }, { scoreA: '', scoreB: '' }];
+          state.matches[2].sets = [{ scoreA: 25, scoreB: 16 }, { scoreA: 25, scoreB: 14 }, { scoreA: '', scoreB: '' }];
+          state.matches[3].sets = [{ scoreA: 25, scoreB: 21 }, { scoreA: 25, scoreB: 20 }, { scoreA: '', scoreB: '' }];
+          state.matches[4].sets = [{ scoreA: 25, scoreB: 22 }, { scoreA: 25, scoreB: 20 }, { scoreA: '', scoreB: '' }];
+          state.matches[5].sets = [{ scoreA: 25, scoreB: 19 }, { scoreA: 25, scoreB: 21 }, { scoreA: '', scoreB: '' }];
+          showToast('Loaded 2-way tie resolved by Head-to-Head');
+        } else if (scenario === '3way-set') {
+          state.matches[0].sets = [{ scoreA: 20, scoreB: 25 }, { scoreA: 20, scoreB: 25 }, { scoreA: '', scoreB: '' }];
+          state.matches[1].sets = [{ scoreA: 25, scoreB: 14 }, { scoreA: 25, scoreB: 18 }, { scoreA: '', scoreB: '' }];
+          state.matches[2].sets = [{ scoreA: 25, scoreB: 15 }, { scoreA: 25, scoreB: 17 }, { scoreA: '', scoreB: '' }];
+          state.matches[3].sets = [{ scoreA: 25, scoreB: 20 }, { scoreA: 20, scoreB: 25 }, { scoreA: 15, scoreB: 10 }];
+          state.matches[4].sets = [{ scoreA: 25, scoreB: 16 }, { scoreA: 25, scoreB: 19 }, { scoreA: '', scoreB: '' }];
+          state.matches[5].sets = [{ scoreA: 25, scoreB: 20 }, { scoreA: 25, scoreB: 20 }, { scoreA: '', scoreB: '' }];
+          showToast('Loaded 3-way tie broken by Set %');
+        } else if (scenario === '3way-points') {
+          state.matches[0].sets = [{ scoreA: 23, scoreB: 25 }, { scoreA: 23, scoreB: 25 }, { scoreA: '', scoreB: '' }];
+          state.matches[1].sets = [{ scoreA: 25, scoreB: 12 }, { scoreA: 25, scoreB: 15 }, { scoreA: '', scoreB: '' }];
+          state.matches[2].sets = [{ scoreA: 25, scoreB: 14 }, { scoreA: 25, scoreB: 13 }, { scoreA: '', scoreB: '' }];
+          state.matches[3].sets = [{ scoreA: 25, scoreB: 20 }, { scoreA: 25, scoreB: 22 }, { scoreA: '', scoreB: '' }];
+          state.matches[4].sets = [{ scoreA: 25, scoreB: 15 }, { scoreA: 25, scoreB: 16 }, { scoreA: '', scoreB: '' }];
+          state.matches[5].sets = [{ scoreA: 25, scoreB: 18 }, { scoreA: 25, scoreB: 22 }, { scoreA: '', scoreB: '' }];
+          showToast('Loaded 3-way tie broken by USAV Point %');
+        }
+      } else {
+        if (scenario === 'clear') {
+          state.matches[0].sets = [{ scoreA: 25, scoreB: 18 }, { scoreA: 25, scoreB: 19 }, { scoreA: '', scoreB: '' }];
+          state.matches[1].sets = [{ scoreA: 25, scoreB: 20 }, { scoreA: 25, scoreB: 22 }, { scoreA: '', scoreB: '' }];
+          state.matches[2].sets = [{ scoreA: 25, scoreB: 21 }, { scoreA: 25, scoreB: 19 }, { scoreA: '', scoreB: '' }];
+          showToast('Loaded 3-team clear result');
+        } else if (scenario === '3way-points' || scenario === '3way-set' || scenario === '2way') {
+          state.matches[0].sets = [{ scoreA: 25, scoreB: 20 }, { scoreA: 25, scoreB: 21 }, { scoreA: '', scoreB: '' }];
+          state.matches[1].sets = [{ scoreA: 20, scoreB: 25 }, { scoreA: 21, scoreB: 25 }, { scoreA: '', scoreB: '' }];
+          state.matches[2].sets = [{ scoreA: 21, scoreB: 25 }, { scoreA: 22, scoreB: 25 }, { scoreA: '', scoreB: '' }];
+          showToast('Loaded 3-way deadlock in 3-team pool');
+        }
+      }
+
+      renderAll();
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toastNotification');
+      const msgSpan = document.getElementById('toastMessage');
+      msgSpan.textContent = msg;
+      toast.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
+      setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
+      }, 2500);
+    }
+
+    function copyStandingsToClipboard() {
+      const stats = calculatePoolStats();
+      const { rankedList } = resolvePoolRanks(stats);
+
+      let text = `=== AES VOLLEYBALL POOL STANDINGS (${state.poolSize}-Team Pool) ===\n`;
+      text += `Rank | Team | Match W-L (Pct) | Sets W-L (Pct) | Points PF-PA (Pct)\n`;
+      text += `------------------------------------------------------------------\n`;
+      
+      rankedList.forEach((stat, i) => {
+        text += `${i + 1}. ${stat.team.name} | ${stat.matchesWon}-${stat.matchesLost} (${(stat.matchPct * 100).toFixed(1)}%) | Sets: ${stat.setsWon}-${stat.setsLost} (${(stat.setPct * 100).toFixed(1)}%) | Pts: ${stat.pointsWon}-${stat.pointsLost} (${(stat.pointPct * 100).toFixed(2)}%)\n`;
+      });
+      
+      text += `\nDetermined per USAV/AES Paper Tie-Break Rules (Matches -> H2H -> Set % -> Point %)\n`;
+
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        showToast('Standings summary copied to clipboard!');
+      } catch (err) {
+        showToast('Failed to copy. Please select manually.');
+      }
+      document.body.removeChild(textarea);
+    }
+
+    function setPoolSize(size) {
+      if (state.poolSize === size) return;
+      state.poolSize = size;
+      
+      const btn3 = document.getElementById('btnPool3');
+      const btn4 = document.getElementById('btnPool4');
+      
+      if (size === 3) {
+        btn3.className = 'px-3 py-1.5 text-xs font-semibold rounded-md transition-all bg-white text-indigo-600 shadow-sm font-bold';
+        btn4.className = 'px-3 py-1.5 text-xs font-semibold rounded-md transition-all text-slate-600 hover:text-slate-900';
+      } else {
+        btn4.className = 'px-3 py-1.5 text-xs font-semibold rounded-md transition-all bg-white text-indigo-600 shadow-sm font-bold';
+        btn3.className = 'px-3 py-1.5 text-xs font-semibold rounded-md transition-all text-slate-600 hover:text-slate-900';
+      }
+
+      initializeMatches();
+      renderAll();
+    }
+
+    function renderAll(reRenderMatches = true) {
+      renderTeamInputs();
+      if (reRenderMatches) {
+        renderMatches();
+      }
+      calculateAndRenderStandings();
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initializeMatches();
+      setupPWA();
+
+      // Slot 1 Buttons
+      document.getElementById('btnSaveSlot1').addEventListener('click', () => saveToSlot(1));
+      document.getElementById('btnLoadSlot1').addEventListener('click', () => loadFromSlot(1));
+      document.getElementById('btnClearSlot1').addEventListener('click', () => clearSlot(1));
+
+      // Slot 2 Buttons
+      document.getElementById('btnSaveSlot2').addEventListener('click', () => saveToSlot(2));
+      document.getElementById('btnLoadSlot2').addEventListener('click', () => loadFromSlot(2));
+      document.getElementById('btnClearSlot2').addEventListener('click', () => clearSlot(2));
+
+      // Pool Size Switchers
+      document.getElementById('btnPool3').addEventListener('click', () => setPoolSize(3));
+      document.getElementById('btnPool4').addEventListener('click', () => setPoolSize(4));
+
+      // Match Format Selector
+      document.getElementById('matchFormat').addEventListener('change', (e) => {
+        state.matchFormat = e.target.value;
+        renderMatches();
+        calculateAndRenderStandings();
+      });
+
+      // Preset Selector
+      document.getElementById('presetSelector').addEventListener('change', (e) => {
+        const val = e.target.value;
+        if (val) {
+          loadPreset(val);
+          e.target.value = '';
+        }
+      });
+
+      // Reset Button
+      document.getElementById('btnReset').addEventListener('click', () => {
+        loadPreset('empty');
+      });
+
+      // Copy Standings Button
+      document.getElementById('btnCopyStandings').addEventListener('click', copyStandingsToClipboard);
+
+      // Load initial default sample
+      loadPreset('clear');
+    });
+  </script>
+</body>
+</html>
