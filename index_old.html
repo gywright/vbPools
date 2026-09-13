@@ -12,16 +12,15 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="AES Calc">
   <meta name="application-name" content="AES Calc">
-  <meta name="description" content="Official USAV and AES Volleyball Pool Rank and Tie-Break Calculator with session persistence.">
+  <meta name="description" content="Official USAV and AES Volleyball Pool Rank and Tie-Break Calculator with real-time multi-court state saving.">
 
   <!-- Manifest Link dynamically populated by JS -->
-  <link rel="manifest" id="dynamicManifest">
+  <link rel="manifest" href="./manifest.json">
 
   <!-- Icons -->
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏐</text></svg>">
   <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏐</text></svg>">
 
-  <!-- Tailwind CSS & Fonts -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -33,6 +32,7 @@
     .font-mono-num {
       font-family: 'JetBrains Mono', monospace;
     }
+    /* Smooth focus rings and inputs */
     input[type=number]::-webkit-inner-spin-button, 
     input[type=number]::-webkit-outer-spin-button { 
       -webkit-appearance: none; 
@@ -68,14 +68,7 @@
             <span class="bg-indigo-100 text-indigo-700 text-xs font-semibold px-2 py-0.5 rounded-full border border-indigo-200">USAV Rules</span>
             <span id="pwaBadge" class="hidden bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-200 uppercase tracking-wide">PWA Active</span>
           </div>
-          <div class="flex items-center gap-2 text-xs text-slate-500">
-            <span>Official paper tie-break criteria</span>
-            <span>•</span>
-            <span id="storageStatus" class="inline-flex items-center gap-1 font-medium text-indigo-600">
-              <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
-              Session Sync Active
-            </span>
-          </div>
+          <p class="text-xs text-slate-500">Official paper tie-break criteria & 2-state court switcher</p>
         </div>
       </div>
 
@@ -87,7 +80,6 @@
           Install App
         </button>
 
-        <!-- Pool Size Switcher -->
         <div class="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-100">
           <button id="btnPool3" class="px-3 py-1.5 text-xs font-semibold rounded-md transition-all text-slate-600 hover:text-slate-900">
             3-Team Pool
@@ -96,15 +88,15 @@
             4-Team Pool
           </button>
         </div>
+
         <div class="relative inline-block text-left">
           <select id="presetSelector" class="bg-white border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-medium rounded-lg px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all cursor-pointer">
             <option value="">⚡ Load Scenario...</option>
             <option value="one-left">🎯 1 Match Left (Path-to-Rank Analyzer)</option>
             <option value="clear">Simple 1st to 4th (No Ties)</option>
-            <option value="2way">2-Way Tie (H2H Decision)</option>
+            <option value="2way">2-Way Tie for 2nd (H2H Decision)</option>
             <option value="3way-set">3-Way Tie broken by Set %</option>
             <option value="3way-points">3-Way Tie broken by Point %</option>
-            <option value="reset-defaults">↺ Reset to Tournament Default Teams</option>
             <option value="empty">Clear All Scores</option>
           </select>
         </div>
@@ -118,7 +110,89 @@
 
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 w-full flex-grow space-y-5">
     
-    <!-- Official Tie-Break Order Banner -->
+    <section class="bg-white rounded-2xl border border-slate-200 shadow-xs p-4 sm:p-5">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-3.5 pb-2.5 border-b border-slate-100">
+        <div class="flex items-center gap-2">
+          <span class="flex h-2.5 w-2.5 relative">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-indigo-600"></span>
+          </span>
+          <h2 class="text-sm font-extrabold text-slate-900 tracking-tight uppercase">Saved Pool States (2 Memory Slots)</h2>
+          <span class="text-[11px] text-slate-400 hidden sm:inline">• Save 2 courts, morning vs afternoon waves, or what-if runs</span>
+        </div>
+        <div class="text-[11px] text-indigo-700 font-medium bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-100">
+          Fast Switching &amp; Instant Restores
+        </div>
+      </div>
+
+      <!-- State Slots Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        
+        <!-- Slot 1 Card -->
+        <div id="slot1Card" class="relative rounded-xl border-2 border-indigo-200 bg-indigo-50/30 p-3.5 transition-all">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <div class="flex items-center gap-2">
+              <span class="w-6 h-6 rounded-lg bg-indigo-600 text-white font-black text-xs flex items-center justify-center shadow-xs">1</span>
+              <input type="text" id="slot1TitleInput" value="Court 1 / Pool A" class="text-xs font-bold text-slate-900 bg-transparent border-b border-dashed border-slate-300 focus:border-indigo-600 focus:outline-none px-1 py-0.5" placeholder="Slot 1 Title">
+            </div>
+            <span id="slot1StatusBadge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
+              Empty Slot
+            </span>
+          </div>
+
+          <div id="slot1Summary" class="text-xs text-slate-500 mb-3 min-h-[32px] flex items-center">
+            No saved state yet. Click "Save Current to Slot 1" to snapshot this pool.
+          </div>
+
+          <div class="flex items-center gap-2 pt-1 border-t border-slate-200/60">
+            <button id="btnSaveSlot1" class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition-colors">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+              Save Current
+            </button>
+            <button id="btnLoadSlot1" disabled class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+              Load Slot 1
+            </button>
+            <button id="btnClearSlot1" title="Clear Slot 1" disabled class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg disabled:opacity-30 disabled:pointer-events-none transition-colors">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Slot 2 Card -->
+        <div id="slot2Card" class="relative rounded-xl border border-slate-200 bg-slate-50/50 p-3.5 transition-all">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <div class="flex items-center gap-2">
+              <span class="w-6 h-6 rounded-lg bg-violet-600 text-white font-black text-xs flex items-center justify-center shadow-xs">2</span>
+              <input type="text" id="slot2TitleInput" value="Court 2 / Pool B" class="text-xs font-bold text-slate-900 bg-transparent border-b border-dashed border-slate-300 focus:border-violet-600 focus:outline-none px-1 py-0.5" placeholder="Slot 2 Title">
+            </div>
+            <span id="slot2StatusBadge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
+              Empty Slot
+            </span>
+          </div>
+
+          <div id="slot2Summary" class="text-xs text-slate-500 mb-3 min-h-[32px] flex items-center">
+            No saved state yet. Click "Save Current to Slot 2" to snapshot this pool.
+          </div>
+
+          <div class="flex items-center gap-2 pt-1 border-t border-slate-200/60">
+            <button id="btnSaveSlot2" class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-violet-600 hover:bg-violet-700 text-white shadow-xs transition-colors">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+              Save Current
+            </button>
+            <button id="btnLoadSlot2" disabled class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+              Load Slot 2
+            </button>
+            <button id="btnClearSlot2" title="Clear Slot 2" disabled class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg disabled:opacity-30 disabled:pointer-events-none transition-colors">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
     <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/80 rounded-2xl p-4 shadow-xs">
       <div class="flex items-start gap-3">
         <div class="text-blue-600 mt-0.5 flex-shrink-0">
@@ -130,10 +204,11 @@
           2) <strong class="text-indigo-900">Head-to-Head</strong> (if 2 teams tied) &rarr;
           3) <strong class="text-indigo-900">Set %</strong> among tied teams (Sets Won / Total Sets Played) &rarr;
           4) <strong class="text-indigo-900">Point %</strong> among tied teams (Points Scored / Total Points Played) &rarr;
-          5) Coin Toss. <span class="text-slate-500 italic">No tie-break playoff sets are played. Every point scored counts! Scores are automatically saved between sessions.</span>
+          5) Coin Toss. <span class="text-slate-500 italic">No tie-break playoff sets are played. Every point scored counts!</span>
         </div>
       </div>
     </div>
+
     <!-- Final Match Path-to-Rank Scenario Analyzer (Shown when 1 match remains) -->
     <div id="finalMatchScenarioCard" class="hidden transition-all">
       <!-- Injected dynamically by JS -->
@@ -147,13 +222,10 @@
         <!-- Team Names Card -->
         <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-5">
           <div class="flex items-center justify-between mb-3">
-            <div>
-              <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                <span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
-                Pool Teams &amp; Tournament Seeds
-              </h2>
-              <p class="text-xs text-slate-400">Seeds and team names are fully editable and persist automatically</p>
-            </div>
+            <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
+              Pool Teams
+            </h2>
             <div class="flex items-center gap-2 text-xs">
               <label for="matchFormat" class="text-slate-500 font-medium">Format:</label>
               <select id="matchFormat" class="bg-slate-50 border border-slate-200 text-slate-700 font-semibold rounded-md px-2 py-1 focus:ring-1 focus:ring-indigo-500">
@@ -164,10 +236,11 @@
             </div>
           </div>
           
-          <div id="teamInputGrid" class="grid grid-cols-1 gap-2.5">
+          <div id="teamInputGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <!-- Injected by JS -->
           </div>
         </div>
+
         <!-- Match Schedule & Score Entry -->
         <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-5">
           <div class="flex items-center justify-between mb-4">
@@ -176,7 +249,7 @@
                 <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
                 Match Scores
               </h2>
-              <p class="text-xs text-slate-500">Scores auto-save across sessions. Set 3 unlocks if sets are split 1-1.</p>
+              <p class="text-xs text-slate-500">Enter set scores for each pool match</p>
             </div>
             <span id="matchProgressBadge" class="text-xs px-2.5 py-1 rounded-full font-semibold bg-amber-50 text-amber-700 border border-amber-200">
               0 / 6 Matches Complete
@@ -206,6 +279,7 @@
               Copy Text
             </button>
           </div>
+
           <!-- Standings Table -->
           <div class="overflow-x-auto custom-scrollbar">
             <table class="w-full text-left border-collapse">
@@ -270,32 +344,24 @@
     <span id="toastMessage">Action completed</span>
   </div>
 
-  <!-- Firebase SDK Modules for Session-to-Session Persistence -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-    // Standard Tournament Team Templates specified by tournament director
-    const DEFAULT_TEAMS_3 = [
-      { id: 'T1', seed: 66, poolSeed: 1, name: 'Bay to Bay 16-Premier (66)', shortName: 'B2B 16-Prem (66)' },
-      { id: 'T2', seed: 72, poolSeed: 2, name: 'FPVC 17-1 (72)', shortName: 'FPVC 17-1 (72)' },
-      { id: 'T3', seed: 83, poolSeed: 3, name: 'Golden State 18 Gold (83)', shortName: 'Golden State 18G (83)' }
-    ];
-
-    const DEFAULT_TEAMS_4 = [
-      { id: 'T1', seed: 8,  poolSeed: 1, name: 'MVVC B 14 White (8)', shortName: 'MVVC 14W (8)' },
-      { id: 'T2', seed: 9,  poolSeed: 2, name: 'SF Elite B 14 Gold (9)', shortName: 'SF Elite 14G (9)' },
-      { id: 'T3', seed: 23, poolSeed: 3, name: 'Bay to Bay 12-1 (23)', shortName: 'B2B 12-1 (23)' },
-      { id: 'T4', seed: 26, poolSeed: 4, name: 'SF Elite B 13 Navy (26)', shortName: 'SF Elite 13N (26)' }
-    ];
-
+  <script>
     // State management
     const state = {
       poolSize: 4, // 3 or 4
       matchFormat: 'best2of3', // 'best2of3', '2sets', 'best3of5'
-      teams: JSON.parse(JSON.stringify(DEFAULT_TEAMS_4)),
+      teams: [
+        { id: 'T1', seed: 1, name: 'Apex Premier 16-1', shortName: 'Apex 16-1' },
+        { id: 'T2', seed: 2, name: 'Storm Volleyball Elite', shortName: 'Storm Elite' },
+        { id: 'T3', seed: 3, name: 'Velocity Juniors Black', shortName: 'Velocity' },
+        { id: 'T4', seed: 4, name: 'Cascade Coast Select', shortName: 'Cascade' }
+      ],
       matches: []
+    };
+
+    // In-memory 2-Slot Storage Structure (No localStorage used!)
+    const slotMemory = {
+      slot1: null,
+      slot2: null
     };
 
     // Standard schedule pairings for 3 and 4 team pools (AES / USAV Standard pool scheduling order)
@@ -316,130 +382,15 @@
     };
 
     const TEAM_COLORS = [
-      { bg: 'bg-blue-600', light: 'bg-blue-50 text-blue-700 border-blue-200', text: 'text-blue-600' },
-      { bg: 'bg-emerald-600', light: 'bg-emerald-50 text-emerald-700 border-emerald-200', text: 'text-emerald-600' },
-      { bg: 'bg-purple-600', light: 'bg-purple-50 text-purple-700 border-purple-200', text: 'text-purple-600' },
-      { bg: 'bg-amber-600', light: 'bg-amber-50 text-amber-700 border-amber-200', text: 'text-amber-600' }
+      { bg: 'bg-blue-500', light: 'bg-blue-50 text-blue-700 border-blue-200', text: 'text-blue-600' },
+      { bg: 'bg-emerald-500', light: 'bg-emerald-50 text-emerald-700 border-emerald-200', text: 'text-emerald-600' },
+      { bg: 'bg-purple-500', light: 'bg-purple-50 text-purple-700 border-purple-200', text: 'text-purple-600' },
+      { bg: 'bg-amber-500', light: 'bg-amber-50 text-amber-700 border-amber-200', text: 'text-amber-600' }
     ];
-    // Persistence Layer Setup (Strictly Firestore Rule 1 & Rule 3 compliant)
-    let db = null;
-    let auth = null;
-    let currentUserId = null;
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'aes-pool-calc';
 
-    async function initCloudSync() {
-      const storageStatus = document.getElementById('storageStatus');
-      try {
-        if (typeof __firebase_config !== 'undefined' && __firebase_config) {
-          const firebaseConfig = JSON.parse(__firebase_config);
-          const app = initializeApp(firebaseConfig);
-          auth = getAuth(app);
-          db = getFirestore(app);
-
-          // Authenticate first before any read/write operations
-          if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-            await signInWithCustomToken(auth, __initial_auth_token);
-          } else {
-            await signInAnonymously(auth);
-          }
-
-          currentUserId = auth.currentUser?.uid;
-          if (currentUserId) {
-            if (storageStatus) {
-              storageStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500"></span> Cloud Synced`;
-              storageStatus.className = 'inline-flex items-center gap-1 font-medium text-emerald-700 text-xs';
-            }
-            await loadSavedSessionState();
-          }
-        } else {
-          if (storageStatus) {
-            storageStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-slate-400"></span> In-Memory Mode`;
-            storageStatus.className = 'inline-flex items-center gap-1 font-medium text-slate-500 text-xs';
-          }
-        }
-      } catch (err) {
-        console.warn('Persistence initialization:', err);
-        if (storageStatus) {
-          storageStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-slate-400"></span> Active Session`;
-          storageStatus.className = 'inline-flex items-center gap-1 font-medium text-slate-500 text-xs';
-        }
-      }
-    }
-
-    let saveTimeout = null;
-    function triggerAutoSave() {
-      if (!db || !currentUserId) return;
-      
-      const storageStatus = document.getElementById('storageStatus');
-      if (storageStatus) {
-        storageStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span> Saving...`;
-        storageStatus.className = 'inline-flex items-center gap-1 font-medium text-amber-700 text-xs';
-      }
-
-      clearTimeout(saveTimeout);
-      saveTimeout = setTimeout(async () => {
-        try {
-          if (!currentUserId || !db) return;
-          // RULE 1: Private user data path
-          const stateDocRef = doc(db, 'artifacts', appId, 'users', currentUserId, 'poolState', 'activeSession');
-          const payload = {
-            poolSize: state.poolSize,
-            matchFormat: state.matchFormat,
-            teams: JSON.stringify(state.teams),
-            matches: JSON.stringify(state.matches),
-            updatedAt: Date.now()
-          };
-          await setDoc(stateDocRef, payload);
-          if (storageStatus) {
-            storageStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500"></span> Auto-Saved`;
-            storageStatus.className = 'inline-flex items-center gap-1 font-medium text-emerald-700 text-xs';
-          }
-        } catch (e) {
-          console.warn('AutoSave error:', e);
-          if (storageStatus) {
-            storageStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-slate-400"></span> In-Memory`;
-            storageStatus.className = 'inline-flex items-center gap-1 font-medium text-slate-500 text-xs';
-          }
-        }
-      }, 500);
-    }
-
-    async function loadSavedSessionState() {
-      if (!db || !currentUserId) return;
-      try {
-        const stateDocRef = doc(db, 'artifacts', appId, 'users', currentUserId, 'poolState', 'activeSession');
-        const docSnap = await getDoc(stateDocRef);
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          if (data && data.poolSize) {
-            state.poolSize = data.poolSize;
-            state.matchFormat = data.matchFormat || 'best2of3';
-            if (data.teams) state.teams = JSON.parse(data.teams);
-            if (data.matches) state.matches = JSON.parse(data.matches);
-
-            // Update Format dropdown and size buttons
-            const formatSelect = document.getElementById('matchFormat');
-            if (formatSelect) formatSelect.value = state.matchFormat;
-
-            const btn3 = document.getElementById('btnPool3');
-            const btn4 = document.getElementById('btnPool4');
-            if (state.poolSize === 3) {
-              btn3.className = 'px-3 py-1.5 text-xs font-semibold rounded-md transition-all bg-white text-indigo-600 shadow-sm font-bold';
-              btn4.className = 'px-3 py-1.5 text-xs font-semibold rounded-md transition-all text-slate-600 hover:text-slate-900';
-            } else {
-              btn4.className = 'px-3 py-1.5 text-xs font-semibold rounded-md transition-all bg-white text-indigo-600 shadow-sm font-bold';
-              btn3.className = 'px-3 py-1.5 text-xs font-semibold rounded-md transition-all text-slate-600 hover:text-slate-900';
-            }
-
-            renderAll();
-            showToast('Restored saved tournament session scores!');
-          }
-        }
-      } catch (err) {
-        console.warn('Could not load existing session:', err);
-      }
-    }
+    // PWA Manifest and Service Worker Registration
     function setupPWA() {
+      // 1. Generate dynamic Web App Manifest
       const manifestData = {
         name: "AES Volleyball Pool Calculator",
         short_name: "AES Calc",
@@ -470,18 +421,28 @@
           manifestLink.setAttribute('href', manifestUrl);
         }
       } catch (e) {
-        console.warn('Manifest blob setup:', e);
+        console.warn('Could not generate dynamic manifest blob:', e);
       }
 
+      // 2. Register Service Worker using Blob
       if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js')
+         .then((reg) => console.log('PWA Service Worker registered:', reg.scope))
+         .catch((err) => console.warn('SW registration failed:', err));
+        });
         try {
           const swCode = `
-            const CACHE_NAME = 'aes-calc-v2';
-            self.addEventListener('install', (e) => self.skipWaiting());
-            self.addEventListener('activate', (e) => e.waitUntil(clients.claim()));
-            self.addEventListener('fetch', (e) => {
-              e.respondWith(
-                fetch(e.request).catch(() => caches.match(e.request))
+            const CACHE_NAME = 'aes-calc-v1';
+            self.addEventListener('install', (event) => {
+              self.skipWaiting();
+            });
+            self.addEventListener('activate', (event) => {
+              event.waitUntil(clients.claim());
+            });
+            self.addEventListener('fetch', (event) => {
+              event.respondWith(
+                fetch(event.request).catch(() => caches.match(event.request))
               );
             });
           `;
@@ -491,11 +452,15 @@
             const pwaBadge = document.getElementById('pwaBadge');
             if (pwaBadge) pwaBadge.classList.remove('hidden');
           }).catch(() => {});
-        } catch (err) {}
+        } catch (err) {
+          // Sandbox or file protocol fallback
+        }
       }
 
+      // 3. Capture PWA install prompt
       let deferredPrompt = null;
       const btnInstall = document.getElementById('btnInstallPwa');
+
       window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         deferredPrompt = e;
@@ -518,6 +483,108 @@
         });
       }
     }
+
+    // State Slots Management
+    function saveToSlot(slotNumber) {
+      const slotKey = `slot${slotNumber}`;
+      const titleInput = document.getElementById(`slot${slotNumber}TitleInput`);
+      const customName = titleInput?.value.trim() || `Slot ${slotNumber}`;
+
+      // Deep copy pool state
+      const snapshot = {
+        name: customName,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        date: new Date().toLocaleDateString([], { month: 'short', day: 'numeric' }),
+        poolSize: state.poolSize,
+        matchFormat: state.matchFormat,
+        teams: JSON.parse(JSON.stringify(state.teams)),
+        matches: JSON.parse(JSON.stringify(state.matches))
+      };
+
+      slotMemory[slotKey] = snapshot;
+      updateSlotUI(slotNumber);
+      showToast(`Saved current pool state to ${customName}`);
+    }
+
+    function loadFromSlot(slotNumber) {
+      const slotKey = `slot${slotNumber}`;
+      const snapshot = slotMemory[slotKey];
+      if (!snapshot) {
+        showToast(`Slot ${slotNumber} is empty.`);
+        return;
+      }
+
+      // Restore parameters
+      state.poolSize = snapshot.poolSize;
+      state.matchFormat = snapshot.matchFormat;
+      state.teams = JSON.parse(JSON.stringify(snapshot.teams));
+      state.matches = JSON.parse(JSON.stringify(snapshot.matches));
+
+      // Update UI headers and format dropdowns
+      const btn3 = document.getElementById('btnPool3');
+      const btn4 = document.getElementById('btnPool4');
+      if (state.poolSize === 3) {
+        btn3.className = 'px-3 py-1.5 text-xs font-semibold rounded-md transition-all bg-white text-indigo-600 shadow-sm font-bold';
+        btn4.className = 'px-3 py-1.5 text-xs font-semibold rounded-md transition-all text-slate-600 hover:text-slate-900';
+      } else {
+        btn4.className = 'px-3 py-1.5 text-xs font-semibold rounded-md transition-all bg-white text-indigo-600 shadow-sm font-bold';
+        btn3.className = 'px-3 py-1.5 text-xs font-semibold rounded-md transition-all text-slate-600 hover:text-slate-900';
+      }
+
+      const matchFormatSelect = document.getElementById('matchFormat');
+      if (matchFormatSelect) matchFormatSelect.value = state.matchFormat;
+
+      // Re-render views
+      renderAll();
+      showToast(`Loaded ${snapshot.name} (${snapshot.timestamp})`);
+    }
+
+    function clearSlot(slotNumber) {
+      const slotKey = `slot${slotNumber}`;
+      slotMemory[slotKey] = null;
+      updateSlotUI(slotNumber);
+      showToast(`Slot ${slotNumber} cleared.`);
+    }
+
+    function updateSlotUI(slotNumber) {
+      const slotKey = `slot${slotNumber}`;
+      const data = slotMemory[slotKey];
+      const card = document.getElementById(`slot${slotNumber}Card`);
+      const statusBadge = document.getElementById(`slot${slotNumber}StatusBadge`);
+      const summaryDiv = document.getElementById(`slot${slotNumber}Summary`);
+      const btnLoad = document.getElementById(`btnLoadSlot${slotNumber}`);
+      const btnClear = document.getElementById(`btnClearSlot${slotNumber}`);
+
+      if (data) {
+        // Compute completed matches
+        let completed = 0;
+        data.matches.forEach(m => {
+          if (computeSingleMatchResult(m).isComplete) completed++;
+        });
+
+        card.className = `relative rounded-xl border-2 ${slotNumber === 1 ? 'border-indigo-500 bg-indigo-50/50' : 'border-violet-500 bg-violet-50/50'} p-3.5 transition-all shadow-xs`;
+        statusBadge.className = `text-[10px] font-bold px-2 py-0.5 rounded-full ${slotNumber === 1 ? 'bg-indigo-100 text-indigo-800' : 'bg-violet-100 text-violet-800'}`;
+        statusBadge.textContent = `Saved • ${data.timestamp}`;
+        
+        summaryDiv.innerHTML = `
+          <div class="space-y-0.5">
+            <div class="font-semibold text-slate-800">${data.poolSize}-Team Pool (${data.matchFormat === '2sets' ? '2 Sets' : (data.matchFormat === 'best3of5' ? 'Best 3 of 5' : 'Best 2 of 3')})</div>
+            <div class="text-[11px] text-slate-600">${completed}/${data.matches.length} matches complete • Teams: ${data.teams.slice(0, data.poolSize).map(t => t.shortName || t.name).join(', ')}</div>
+          </div>
+        `;
+
+        btnLoad.disabled = false;
+        btnClear.disabled = false;
+      } else {
+        card.className = 'relative rounded-xl border border-slate-200 bg-slate-50/50 p-3.5 transition-all';
+        statusBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500';
+        statusBadge.textContent = 'Empty Slot';
+        summaryDiv.textContent = `No saved state yet. Click "Save Current to Slot ${slotNumber}" to snapshot this pool.`;
+        btnLoad.disabled = true;
+        btnClear.disabled = true;
+      }
+    }
+
     function initializeMatches() {
       const schedule = POOL_SCHEDULES[state.poolSize];
       state.matches = schedule.map(item => {
@@ -556,18 +623,13 @@
       activeTeams.forEach((team, index) => {
         const color = TEAM_COLORS[index];
         const div = document.createElement('div');
-        div.className = 'flex flex-wrap sm:flex-nowrap items-center gap-2 p-2.5 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-slate-50 transition-colors';
+        div.className = 'flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 transition-colors';
         div.innerHTML = `
-          <div class="flex items-center gap-2 flex-shrink-0">
-            <span class="w-6 h-6 rounded-lg ${color.bg} text-white font-bold text-xs flex items-center justify-center shadow-xs">
-              ${team.poolSeed || (index + 1)}
-            </span>
-            <span class="text-[11px] font-bold text-slate-500 bg-slate-200/80 px-2 py-0.5 rounded font-mono">
-              Seed #${team.seed}
-            </span>
-          </div>
-          <div class="flex-grow min-w-0 w-full sm:w-auto">
-            <input type="text" value="${escapeHtml(team.name)}" data-team-id="${team.id}" class="team-name-input w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs" placeholder="Team Name and Seed">
+          <span class="w-6 h-6 rounded-lg ${color.bg} text-white font-bold text-xs flex items-center justify-center flex-shrink-0">
+            ${team.seed}
+          </span>
+          <div class="flex-grow min-w-0">
+            <input type="text" value="${escapeHtml(team.name)}" data-team-id="${team.id}" class="team-name-input w-full bg-white border border-slate-200 rounded px-2 py-1 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500" placeholder="Team ${team.seed} Name">
           </div>
         `;
         container.appendChild(div);
@@ -579,15 +641,15 @@
           const t = state.teams.find(item => item.id === tId);
           if (t) {
             t.name = e.target.value;
-            const effectiveName = t.name.trim() || `Team ${t.poolSeed || t.seed}`;
-            t.shortName = effectiveName.length > 20 ? effectiveName.substring(0, 18) + '...' : effectiveName;
+            const effectiveName = t.name.trim() || `Team ${t.seed}`;
+            t.shortName = effectiveName.length > 16 ? effectiveName.substring(0, 14) + '...' : effectiveName;
             updateTeamLabels(tId, effectiveName, t.shortName);
             calculateAndRenderStandings();
-            triggerAutoSave();
           }
         });
       });
     }
+
     function renderMatches() {
       const container = document.getElementById('matchesContainer');
       container.innerHTML = '';
@@ -627,7 +689,7 @@
           `;
         }
 
-        // Determine if Set 3 is disabled (ONLY if match was already cleanly won 2-0)
+        // Determine if Set 3 is disabled (ONLY if match was already swept 2-0)
         let set3Disabled = false;
         if (state.matchFormat === 'best2of3') {
           const s1 = match.sets[0];
@@ -701,6 +763,7 @@
             </td>
           `;
         }
+
         card.innerHTML = `
           <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
             <div class="flex items-center gap-2">
@@ -727,10 +790,10 @@
                   <td class="py-2 pr-2">
                     <div class="flex items-center justify-between gap-2">
                       <div class="flex items-center gap-2 min-w-0">
-                        <span class="w-4 h-4 rounded text-[10px] font-bold text-white ${colorA.bg} flex items-center justify-center flex-shrink-0">${teamA.poolSeed || teamA.seed}</span>
-                        <span data-team-label="${teamA.id}" data-team-title="${teamA.id}" class="font-bold text-xs text-slate-900 truncate max-w-[150px] sm:max-w-[220px]" title="${escapeHtml(teamA.name)}">${escapeHtml(teamA.name)}</span>
+                        <span class="w-4 h-4 rounded text-[10px] font-bold text-white ${colorA.bg} flex items-center justify-center flex-shrink-0">${teamA.seed}</span>
+                        <span data-team-label="${teamA.id}" data-team-title="${teamA.id}" class="font-bold text-xs text-slate-900 truncate max-w-[140px] sm:max-w-[200px]" title="${escapeHtml(teamA.name)}">${escapeHtml(teamA.name)}</span>
                       </div>
-                      ${matchResult.winner === 'A' ? '<span class="text-[10px] font-extrabold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">WIN</span>' : ''}
+                      ${matchResult.winner === 'A' ? '<span class="text-[11px] font-bold text-emerald-600 bg-emerald-100 px-1.5 py-0.2 rounded">WIN</span>' : ''}
                     </div>
                   </td>
                   ${cellsRowA}
@@ -744,10 +807,10 @@
                   <td class="py-2 pr-2">
                     <div class="flex items-center justify-between gap-2">
                       <div class="flex items-center gap-2 min-w-0">
-                        <span class="w-4 h-4 rounded text-[10px] font-bold text-white ${colorB.bg} flex items-center justify-center flex-shrink-0">${teamB.poolSeed || teamB.seed}</span>
-                        <span data-team-label="${teamB.id}" data-team-title="${teamB.id}" class="font-bold text-xs text-slate-900 truncate max-w-[150px] sm:max-w-[220px]" title="${escapeHtml(teamB.name)}">${escapeHtml(teamB.name)}</span>
+                        <span class="w-4 h-4 rounded text-[10px] font-bold text-white ${colorB.bg} flex items-center justify-center flex-shrink-0">${teamB.seed}</span>
+                        <span data-team-label="${teamB.id}" data-team-title="${teamB.id}" class="font-bold text-xs text-slate-900 truncate max-w-[140px] sm:max-w-[200px]" title="${escapeHtml(teamB.name)}">${escapeHtml(teamB.name)}</span>
                       </div>
-                      ${matchResult.winner === 'B' ? '<span class="text-[10px] font-extrabold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">WIN</span>' : ''}
+                      ${matchResult.winner === 'B' ? '<span class="text-[11px] font-bold text-emerald-600 bg-emerald-100 px-1.5 py-0.2 rounded">WIN</span>' : ''}
                     </div>
                   </td>
                   ${cellsRowB}
@@ -791,7 +854,6 @@
 
           updateDecidingSetState(mIdx);
           calculateAndRenderStandings();
-          triggerAutoSave();
         });
 
         input.addEventListener('focus', function() {
@@ -799,6 +861,7 @@
         });
       });
     }
+
     function updateDecidingSetState(mIdx) {
       if (state.matchFormat !== 'best2of3') return;
       const match = state.matches[mIdx];
@@ -827,6 +890,215 @@
         }
       });
     }
+
+    function analyzeFinalMatchScenarios() {
+      const activeTeams = state.teams.slice(0, state.poolSize);
+      const incompleteMatches = state.matches.filter(m => !computeSingleMatchResult(m).isComplete);
+
+      if (incompleteMatches.length !== 1) {
+        return null;
+      }
+
+      const finalMatch = incompleteMatches[0];
+      const teamA = state.teams.find(t => t.id === finalMatch.teamAId);
+      const teamB = state.teams.find(t => t.id === finalMatch.teamBId);
+
+      let possibleOutcomes = [];
+      if (state.matchFormat === '2sets') {
+        possibleOutcomes = [
+          { label: `${teamA.shortName || teamA.name} wins 2-0`, sets: [{ scoreA: 25, scoreB: 20 }, { scoreA: 25, scoreB: 20 }] },
+          { label: `Split 1-1 (${teamA.shortName} 1, ${teamB.shortName} 1)`, sets: [{ scoreA: 25, scoreB: 20 }, { scoreA: 20, scoreB: 25 }] },
+          { label: `${teamB.shortName || teamB.name} wins 2-0`, sets: [{ scoreA: 20, scoreB: 25 }, { scoreA: 20, scoreB: 25 }] }
+        ];
+      } else {
+        possibleOutcomes = [
+          { key: 'A_2_0', label: `${teamA.shortName || teamA.name} wins 2-0`, tag: '2-0', sets: [{ scoreA: 25, scoreB: 20 }, { scoreA: 25, scoreB: 20 }, { scoreA: '', scoreB: '' }] },
+          { key: 'A_2_1', label: `${teamA.shortName || teamA.name} wins 2-1`, tag: '2-1', sets: [{ scoreA: 25, scoreB: 20 }, { scoreA: 20, scoreB: 25 }, { scoreA: 15, scoreB: 12 }] },
+          { key: 'B_2_1', label: `${teamB.shortName || teamB.name} wins 2-1`, tag: '1-2', sets: [{ scoreA: 20, scoreB: 25 }, { scoreA: 25, scoreB: 20 }, { scoreA: 12, scoreB: 15 }] },
+          { key: 'B_2_0', label: `${teamB.shortName || teamB.name} wins 2-0`, tag: '0-2', sets: [{ scoreA: 20, scoreB: 25 }, { scoreA: 20, scoreB: 25 }, { scoreA: '', scoreB: '' }] }
+        ];
+      }
+
+      const outcomeResults = possibleOutcomes.map(outcome => {
+        const simMatches = state.matches.map(m => {
+          if (m.id === finalMatch.id) {
+            return {
+              ...m,
+              sets: outcome.sets.map(s => ({ ...s }))
+            };
+          }
+          return {
+            ...m,
+            sets: m.sets.map(s => ({ ...s }))
+          };
+        });
+
+        const originalMatches = state.matches;
+        state.matches = simMatches;
+        const simStats = calculatePoolStats();
+        const { rankedList } = resolvePoolRanks(simStats);
+        state.matches = originalMatches;
+
+        const teamRanks = {};
+        rankedList.forEach((item, idx) => {
+          teamRanks[item.team.id] = idx + 1;
+        });
+
+        return {
+          outcome,
+          rankedList,
+          teamRanks
+        };
+      });
+
+      const teamRequirements = activeTeams.map(t => {
+        const ranksAchievable = {};
+        outcomeResults.forEach(res => {
+          const rank = res.teamRanks[t.id];
+          if (!ranksAchievable[rank]) ranksAchievable[rank] = [];
+          ranksAchievable[rank].push(res.outcome.label);
+        });
+
+        const descriptions = [];
+        for (let r = 1; r <= activeTeams.length; r++) {
+          if (ranksAchievable[r]) {
+            if (ranksAchievable[r].length === outcomeResults.length) {
+              descriptions.push({ rank: r, text: `<strong class="text-indigo-600">Locked in #${r}</strong> (outcome of Match #${finalMatch.matchNum} will not change this rank).` });
+            } else {
+              descriptions.push({ rank: r, text: `Finishes <strong class="text-slate-900">#${r}</strong> if: ${ranksAchievable[r].join(' OR ')}.` });
+            }
+          }
+        }
+
+        return {
+          team: t,
+          descriptions,
+          ranksAchievable
+        };
+      });
+
+      return {
+        finalMatch,
+        teamA,
+        teamB,
+        outcomeResults,
+        teamRequirements
+      };
+    }
+
+    function renderScenarioAnalysis() {
+      const card = document.getElementById('finalMatchScenarioCard');
+      const analysis = analyzeFinalMatchScenarios();
+
+      if (!analysis) {
+        card.classList.add('hidden');
+        card.innerHTML = '';
+        return;
+      }
+
+      card.classList.remove('hidden');
+
+      const { finalMatch, teamA, teamB, outcomeResults, teamRequirements } = analysis;
+
+      let matrixHeaders = '<th class="p-2.5 text-left text-[11px] font-bold text-slate-600 uppercase bg-slate-100">Possible Result</th>';
+      state.teams.slice(0, state.poolSize).forEach(t => {
+        matrixHeaders += `<th class="p-2.5 text-center text-[11px] font-bold text-slate-700 uppercase bg-slate-100">${escapeHtml(t.shortName || t.name)}</th>`;
+      });
+      matrixHeaders += '<th class="p-2.5 text-center text-[11px] font-bold text-slate-500 uppercase bg-slate-100">Action</th>';
+
+      let matrixRows = '';
+      outcomeResults.forEach((res, idx) => {
+        let cells = `<td class="p-2.5 font-bold text-xs text-slate-800 border-b border-slate-100">${escapeHtml(res.outcome.label)}</td>`;
+        state.teams.slice(0, state.poolSize).forEach(t => {
+          const r = res.teamRanks[t.id];
+          let badge = '';
+          if (r === 1) badge = '<span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-400 text-slate-900 font-extrabold text-xs shadow-xs">1st</span>';
+          else if (r === 2) badge = '<span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-300 text-slate-800 font-extrabold text-xs shadow-xs">2nd</span>';
+          else if (r === 3) badge = '<span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-700 text-amber-100 font-bold text-xs">3rd</span>';
+          else badge = '<span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-500 font-medium text-xs">4th</span>';
+          cells += `<td class="p-2.5 text-center border-b border-slate-100">${badge}</td>`;
+        });
+
+        cells += `
+          <td class="p-2.5 text-center border-b border-slate-100">
+            <button onclick="applySimulatedOutcome(${idx})" class="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg transition-colors">
+              ⚡ Test Score
+            </button>
+          </td>
+        `;
+        matrixRows += `<tr class="hover:bg-indigo-50/30 transition-colors">${cells}</tr>`;
+      });
+
+      let teamReqsHtml = '';
+      teamRequirements.forEach(tr => {
+        const color = TEAM_COLORS[state.teams.indexOf(tr.team)];
+        teamReqsHtml += `
+          <div class="p-3 bg-white border border-slate-200 rounded-xl shadow-xs space-y-1.5">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="w-3 h-3 rounded-full ${color.bg}"></span>
+              <h4 class="font-bold text-xs text-slate-900">${escapeHtml(tr.team.name)}</h4>
+            </div>
+            <div class="space-y-1 text-xs text-slate-600">
+              ${tr.descriptions.map(d => `<div class="pl-2 border-l-2 border-indigo-200">${d.text}</div>`).join('')}
+            </div>
+          </div>
+        `;
+      });
+
+      card.innerHTML = `
+        <div class="bg-gradient-to-br from-indigo-900 via-indigo-800 to-slate-900 text-white p-5 rounded-2xl shadow-md border border-indigo-700">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-3 pb-3 border-b border-indigo-700/60">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-xl bg-amber-400 text-slate-900 font-black text-lg flex items-center justify-center shadow">
+                🎯
+              </div>
+              <div>
+                <h3 class="text-sm font-extrabold tracking-tight text-white flex items-center gap-2">
+                  Final Match Remaining: Match #${finalMatch.matchNum} (${escapeHtml(teamA.shortName || teamA.name)} vs ${escapeHtml(teamB.shortName || teamB.name)})
+                </h3>
+                <p class="text-xs text-indigo-200">What is needed for each team to finish in each rank</p>
+              </div>
+            </div>
+            <span class="text-[11px] font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30 px-2.5 py-1 rounded-full">
+              Automated Tie-Break Scenarios
+            </span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 my-4 text-slate-800">
+            ${teamReqsHtml}
+          </div>
+
+          <div class="bg-white rounded-xl overflow-hidden text-slate-800 shadow-sm border border-slate-200 mt-3">
+            <div class="px-4 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+              <span class="text-xs font-bold text-slate-700 uppercase tracking-wider">Final Outcome Simulation Matrix</span>
+              <span class="text-[11px] text-slate-500">Click "Test Score" to preview live standings</span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr>${matrixHeaders}</tr>
+                </thead>
+                <tbody>
+                  ${matrixRows}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    window.applySimulatedOutcome = function(outcomeIndex) {
+      const analysis = analyzeFinalMatchScenarios();
+      if (!analysis || !analysis.outcomeResults[outcomeIndex]) return;
+
+      const simOutcome = analysis.outcomeResults[outcomeIndex].outcome;
+      const finalMatch = analysis.finalMatch;
+
+      finalMatch.sets = simOutcome.sets.map(s => ({ ...s }));
+      renderAll();
+      showToast(`Applied: ${simOutcome.label}`);
+    };
 
     function isSetComplete(scoreA, scoreB, target = 25) {
       if (scoreA === '' || scoreB === '' || scoreA === null || scoreB === null || scoreA === undefined || scoreB === undefined) {
@@ -902,6 +1174,7 @@
         completedSets
       };
     }
+
     function calculatePoolStats() {
       const activeTeams = state.teams.slice(0, state.poolSize);
       const stats = {};
@@ -991,6 +1264,7 @@
 
       return stats;
     }
+
     function resolvePoolRanks(stats) {
       const activeTeams = state.teams.slice(0, state.poolSize);
       const auditLog = [];
@@ -1044,7 +1318,7 @@
           } else {
             auditLog.push({
               step: 'H2H Sets Deadlocked',
-              description: `Head-to-head match is split or pending. Comparing Overall Set % (USAV Rule).`
+              description: `Head-to-head match is split or not completed. Comparing Overall Set % (USAV Rule).`
             });
             if (tA.setPct !== tB.setPct) {
               const winner = tA.setPct > tB.setPct ? tA : tB;
@@ -1067,7 +1341,7 @@
               const loser = winner === tA ? tB : tA;
               auditLog.push({
                 step: 'Seed / Coin Flip',
-                description: `All statistical metrics equal. Resolved by tournament seed: Seed #${winner.team.seed} over Seed #${loser.team.seed}.`
+                description: `All metrics equal. Resolved by tournament seed: ${winner.team.name} seeded higher.`
               });
               finalRanked.push(winner, loser);
             }
@@ -1134,6 +1408,7 @@
 
       return { winner, setsA, setsB, pointsA, pointsB, isComplete: res.isComplete };
     }
+
     function resolveMultiTeamTie(tiedTeams, auditLog) {
       const tiedTeamIds = new Set(tiedTeams.map(t => t.team.id));
 
@@ -1267,11 +1542,12 @@
       }
 
       auditLog.push({
-        step: 'Deadlock: Seed Priority',
+        step: 'Deadlock: Seed / Coin Flip',
         description: `Set % and Point % are identical. Rank assigned based on initial tournament seeding.`
       });
       return tiedTeams.sort((a, b) => a.team.seed - b.team.seed);
     }
+
     function calculateAndRenderStandings() {
       const stats = calculatePoolStats();
       const { rankedList, auditLog } = resolvePoolRanks(stats);
@@ -1306,9 +1582,9 @@
             <div class="flex items-center gap-2">
               <span class="w-2.5 h-2.5 rounded-full ${color.bg}"></span>
               <div>
-                <div class="flex items-center gap-1.5 flex-wrap">
+                <div class="flex items-center gap-1.5">
                   <span>${escapeHtml(stat.team.name)}</span>
-                  <span class="text-[10px] text-slate-500 font-mono bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">Seed #${stat.team.seed}</span>
+                  <span class="text-[10px] text-slate-400 font-mono">(#${stat.team.seed})</span>
                 </div>
                 <div class="text-[10px] font-normal ${isGoldAdvancer ? 'text-emerald-600 font-semibold' : 'text-slate-400'}">
                   ${isGoldAdvancer ? '★ Gold Bracket Bound' : 'Silver Bracket'}
@@ -1345,12 +1621,13 @@
       renderCrossMatrix(stats);
       renderScenarioAnalysis();
     }
+
     function renderAuditLog(auditLog) {
       const container = document.getElementById('tieBreakAuditContainer');
       container.innerHTML = '';
 
       if (!auditLog || auditLog.length === 0) {
-        container.innerHTML = '<p class="text-slate-400 italic">No matches completed yet.</p>';
+        container.innerHTML = '<p class="text-slate-400 italic">No matches entered yet.</p>';
         return;
       }
 
@@ -1413,235 +1690,14 @@
 
       table.innerHTML = thead + tbody;
     }
-    function analyzeFinalMatchScenarios() {
-      const activeTeams = state.teams.slice(0, state.poolSize);
-      const incompleteMatches = state.matches.filter(m => !computeSingleMatchResult(m).isComplete);
 
-      if (incompleteMatches.length !== 1) {
-        return null;
-      }
-
-      const finalMatch = incompleteMatches[0];
-      const teamA = state.teams.find(t => t.id === finalMatch.teamAId);
-      const teamB = state.teams.find(t => t.id === finalMatch.teamBId);
-
-      let possibleOutcomes = [];
-      if (state.matchFormat === '2sets') {
-        possibleOutcomes = [
-          { label: `${teamA.shortName || teamA.name} wins 2-0`, sets: [{ scoreA: 25, scoreB: 20 }, { scoreA: 25, scoreB: 20 }] },
-          { label: `Split 1-1 (${teamA.shortName} 1, ${teamB.shortName} 1)`, sets: [{ scoreA: 25, scoreB: 20 }, { scoreA: 20, scoreB: 25 }] },
-          { label: `${teamB.shortName || teamB.name} wins 2-0`, sets: [{ scoreA: 20, scoreB: 25 }, { scoreA: 20, scoreB: 25 }] }
-        ];
-      } else {
-        possibleOutcomes = [
-          { key: 'A_2_0', label: `${teamA.shortName || teamA.name} wins 2-0`, tag: '2-0', sets: [{ scoreA: 25, scoreB: 20 }, { scoreA: 25, scoreB: 20 }, { scoreA: '', scoreB: '' }] },
-          { key: 'A_2_1', label: `${teamA.shortName || teamA.name} wins 2-1`, tag: '2-1', sets: [{ scoreA: 25, scoreB: 20 }, { scoreA: 20, scoreB: 25 }, { scoreA: 15, scoreB: 12 }] },
-          { key: 'B_2_1', label: `${teamB.shortName || teamB.name} wins 2-1`, tag: '1-2', sets: [{ scoreA: 20, scoreB: 25 }, { scoreA: 25, scoreB: 20 }, { scoreA: 12, scoreB: 15 }] },
-          { key: 'B_2_0', label: `${teamB.shortName || teamB.name} wins 2-0`, tag: '0-2', sets: [{ scoreA: 20, scoreB: 25 }, { scoreA: 20, scoreB: 25 }, { scoreA: '', scoreB: '' }] }
-        ];
-      }
-
-      const outcomeResults = possibleOutcomes.map(outcome => {
-        const simMatches = state.matches.map(m => {
-          if (m.id === finalMatch.id) {
-            return {
-              ...m,
-              sets: outcome.sets.map(s => ({ ...s }))
-            };
-          }
-          return {
-            ...m,
-            sets: m.sets.map(s => ({ ...s }))
-          };
-        });
-
-        const originalMatches = state.matches;
-        state.matches = simMatches;
-        const simStats = calculatePoolStats();
-        const { rankedList } = resolvePoolRanks(simStats);
-        state.matches = originalMatches;
-
-        const teamRanks = {};
-        rankedList.forEach((item, idx) => {
-          teamRanks[item.team.id] = idx + 1;
-        });
-
-        return {
-          outcome,
-          rankedList,
-          teamRanks
-        };
-      });
-
-      const teamRequirements = activeTeams.map(t => {
-        const ranksAchievable = {};
-        outcomeResults.forEach(res => {
-          const rank = res.teamRanks[t.id];
-          if (!ranksAchievable[rank]) ranksAchievable[rank] = [];
-          ranksAchievable[rank].push(res.outcome.label);
-        });
-
-        const descriptions = [];
-        for (let r = 1; r <= activeTeams.length; r++) {
-          if (ranksAchievable[r]) {
-            if (ranksAchievable[r].length === outcomeResults.length) {
-              descriptions.push({ rank: r, text: `<strong class="text-indigo-600">Locked in #${r}</strong> (outcome of Match #${finalMatch.matchNum} will not change this rank).` });
-            } else {
-              descriptions.push({ rank: r, text: `Finishes <strong class="text-slate-900">#${r}</strong> if: ${ranksAchievable[r].join(' OR ')}.` });
-            }
-          }
-        }
-
-        return {
-          team: t,
-          descriptions,
-          ranksAchievable
-        };
-      });
-
-      return {
-        finalMatch,
-        teamA,
-        teamB,
-        outcomeResults,
-        teamRequirements
-      };
-    }
-    function renderScenarioAnalysis() {
-      const card = document.getElementById('finalMatchScenarioCard');
-      const analysis = analyzeFinalMatchScenarios();
-
-      if (!analysis) {
-        card.classList.add('hidden');
-        card.innerHTML = '';
-        return;
-      }
-
-      card.classList.remove('hidden');
-
-      const { finalMatch, teamA, teamB, outcomeResults, teamRequirements } = analysis;
-
-      let matrixHeaders = '<th class="p-2.5 text-left text-[11px] font-bold text-slate-600 uppercase bg-slate-100">Possible Result</th>';
-      state.teams.slice(0, state.poolSize).forEach(t => {
-        matrixHeaders += `<th class="p-2.5 text-center text-[11px] font-bold text-slate-700 uppercase bg-slate-100">${escapeHtml(t.shortName || t.name)}</th>`;
-      });
-      matrixHeaders += '<th class="p-2.5 text-center text-[11px] font-bold text-slate-500 uppercase bg-slate-100">Action</th>';
-
-      let matrixRows = '';
-      outcomeResults.forEach((res, idx) => {
-        let cells = `<td class="p-2.5 font-bold text-xs text-slate-800 border-b border-slate-100">${escapeHtml(res.outcome.label)}</td>`;
-        state.teams.slice(0, state.poolSize).forEach(t => {
-          const r = res.teamRanks[t.id];
-          let badge = '';
-          if (r === 1) badge = '<span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-400 text-slate-900 font-extrabold text-xs shadow-xs">1st</span>';
-          else if (r === 2) badge = '<span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-300 text-slate-800 font-extrabold text-xs shadow-xs">2nd</span>';
-          else if (r === 3) badge = '<span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-700 text-amber-100 font-bold text-xs">3rd</span>';
-          else badge = '<span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-500 font-medium text-xs">4th</span>';
-          cells += `<td class="p-2.5 text-center border-b border-slate-100">${badge}</td>`;
-        });
-
-        cells += `
-          <td class="p-2.5 text-center border-b border-slate-100">
-            <button onclick="window.applySimulatedOutcome(${idx})" class="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg transition-colors">
-              ⚡ Test Score
-            </button>
-          </td>
-        `;
-        matrixRows += `<tr class="hover:bg-indigo-50/30 transition-colors">${cells}</tr>`;
-      });
-
-      let teamReqsHtml = '';
-      teamRequirements.forEach(tr => {
-        const color = TEAM_COLORS[state.teams.indexOf(tr.team)];
-        teamReqsHtml += `
-          <div class="p-3 bg-white border border-slate-200 rounded-xl shadow-xs space-y-1.5">
-            <div class="flex items-center gap-2 mb-1">
-              <span class="w-3 h-3 rounded-full ${color.bg}"></span>
-              <h4 class="font-bold text-xs text-slate-900">${escapeHtml(tr.team.name)}</h4>
-            </div>
-            <div class="space-y-1 text-xs text-slate-600">
-              ${tr.descriptions.map(d => `<div class="pl-2 border-l-2 border-indigo-200">${d.text}</div>`).join('')}
-            </div>
-          </div>
-        `;
-      });
-
-      card.innerHTML = `
-        <div class="bg-gradient-to-br from-indigo-900 via-indigo-800 to-slate-900 text-white p-5 rounded-2xl shadow-md border border-indigo-700">
-          <div class="flex flex-wrap items-center justify-between gap-3 mb-3 pb-3 border-b border-indigo-700/60">
-            <div class="flex items-center gap-3">
-              <div class="w-9 h-9 rounded-xl bg-amber-400 text-slate-900 font-black text-lg flex items-center justify-center shadow">
-                🎯
-              </div>
-              <div>
-                <h3 class="text-sm font-extrabold tracking-tight text-white flex items-center gap-2">
-                  Final Match Remaining: Match #${finalMatch.matchNum} (${escapeHtml(teamA.shortName || teamA.name)} vs ${escapeHtml(teamB.shortName || teamB.name)})
-                </h3>
-                <p class="text-xs text-indigo-200">What is needed for each team to finish in each rank</p>
-              </div>
-            </div>
-            <span class="text-[11px] font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30 px-2.5 py-1 rounded-full">
-              Automated Tie-Break Scenarios
-            </span>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 my-4 text-slate-800">
-            ${teamReqsHtml}
-          </div>
-
-          <div class="bg-white rounded-xl overflow-hidden text-slate-800 shadow-sm border border-slate-200 mt-3">
-            <div class="px-4 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-              <span class="text-xs font-bold text-slate-700 uppercase tracking-wider">Final Outcome Simulation Matrix</span>
-              <span class="text-[11px] text-slate-500">Click "Test Score" to preview live standings</span>
-            </div>
-            <div class="overflow-x-auto">
-              <table class="w-full text-left border-collapse">
-                <thead>
-                  <tr>${matrixHeaders}</tr>
-                </thead>
-                <tbody>
-                  ${matrixRows}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
-    window.applySimulatedOutcome = function(outcomeIndex) {
-      const analysis = analyzeFinalMatchScenarios();
-      if (!analysis || !analysis.outcomeResults[outcomeIndex]) return;
-
-      const simOutcome = analysis.outcomeResults[outcomeIndex].outcome;
-      const finalMatch = analysis.finalMatch;
-
-      finalMatch.sets = simOutcome.sets.map(s => ({ ...s }));
-      renderAll();
-      triggerAutoSave();
-      showToast(`Applied: ${simOutcome.label}`);
-    };
     function loadPreset(scenario) {
-      if (scenario === 'reset-defaults') {
-        if (state.poolSize === 3) {
-          state.teams = JSON.parse(JSON.stringify(DEFAULT_TEAMS_3));
-        } else {
-          state.teams = JSON.parse(JSON.stringify(DEFAULT_TEAMS_4));
-        }
-        initializeMatches();
-        renderAll();
-        triggerAutoSave();
-        showToast(`Reset to default ${state.poolSize}-team tournament roster!`);
-        return;
-      }
-
       if (scenario === 'empty') {
         state.matches.forEach(m => {
           m.sets = [{ scoreA: '', scoreB: '' }, { scoreA: '', scoreB: '' }, { scoreA: '', scoreB: '' }];
         });
         showToast('All scores cleared');
         renderAll();
-        triggerAutoSave();
         return;
       }
 
@@ -1660,14 +1716,6 @@
           state.matches[2].sets = [{ scoreA: 25, scoreB: 16 }, { scoreA: 25, scoreB: 14 }, { scoreA: '', scoreB: '' }];
           state.matches[3].sets = [{ scoreA: 25, scoreB: 21 }, { scoreA: 25, scoreB: 20 }, { scoreA: '', scoreB: '' }];
           state.matches[4].sets = [{ scoreA: 25, scoreB: 22 }, { scoreA: 25, scoreB: 20 }, { scoreA: '', scoreB: '' }];
-          state.matches[5].sets = [{ scoreA: 25, scoreB: 19 }, { scoreA: 25, scoreB: 21 }, { scoreA: '', scoreB: '' }];
-          showToast('Loaded clear 1st to 4th results');
-        } else if (scenario === '2way') {
-          state.matches[0].sets = [{ scoreA: 25, scoreB: 18 }, { scoreA: 25, scoreB: 20 }, { scoreA: '', scoreB: '' }];
-          state.matches[1].sets = [{ scoreA: 25, scoreB: 16 }, { scoreA: 25, scoreB: 17 }, { scoreA: '', scoreB: '' }];
-          state.matches[2].sets = [{ scoreA: 25, scoreB: 14 }, { scoreA: 25, scoreB: 16 }, { scoreA: '', scoreB: '' }];
-          state.matches[3].sets = [{ scoreA: 25, scoreB: 20 }, { scoreA: 25, scoreB: 22 }, { scoreA: '', scoreB: '' }];
-          state.matches[4].sets = [{ scoreA: 22, scoreB: 25 }, { scoreA: 23, scoreB: 25 }, { scoreA: '', scoreB: '' }];
           state.matches[5].sets = [{ scoreA: 25, scoreB: 19 }, { scoreA: 25, scoreB: 21 }, { scoreA: '', scoreB: '' }];
           showToast('Loaded 2-way tie resolved by Head-to-Head');
         } else if (scenario === '3way-set') {
@@ -1688,33 +1736,22 @@
           showToast('Loaded 3-way tie broken by USAV Point %');
         }
       } else {
-        // 3-team pool presets
-        if (scenario === 'one-left') {
-          state.matches[0].sets = [{ scoreA: 25, scoreB: 19 }, { scoreA: 25, scoreB: 21 }, { scoreA: '', scoreB: '' }];
-          state.matches[1].sets = [{ scoreA: 25, scoreB: 20 }, { scoreA: 25, scoreB: 22 }, { scoreA: '', scoreB: '' }];
-          state.matches[2].sets = [{ scoreA: '', scoreB: '' }, { scoreA: '', scoreB: '' }, { scoreA: '', scoreB: '' }];
-          showToast('Loaded 3-team scenario with Match #3 remaining!');
-        } else if (scenario === 'clear') {
+        if (scenario === 'clear') {
           state.matches[0].sets = [{ scoreA: 25, scoreB: 18 }, { scoreA: 25, scoreB: 19 }, { scoreA: '', scoreB: '' }];
           state.matches[1].sets = [{ scoreA: 25, scoreB: 20 }, { scoreA: 25, scoreB: 22 }, { scoreA: '', scoreB: '' }];
           state.matches[2].sets = [{ scoreA: 25, scoreB: 21 }, { scoreA: 25, scoreB: 19 }, { scoreA: '', scoreB: '' }];
           showToast('Loaded 3-team clear result');
-        } else if (scenario === '2way') {
-          state.matches[0].sets = [{ scoreA: 25, scoreB: 18 }, { scoreA: 25, scoreB: 20 }, { scoreA: '', scoreB: '' }];
-          state.matches[1].sets = [{ scoreA: 21, scoreB: 25 }, { scoreA: 19, scoreB: 25 }, { scoreA: '', scoreB: '' }];
-          state.matches[2].sets = [{ scoreA: 25, scoreB: 21 }, { scoreA: 25, scoreB: 22 }, { scoreA: '', scoreB: '' }];
-          showToast('Loaded 2-way tie resolved by H2H');
-        } else if (scenario === '3way-points' || scenario === '3way-set') {
+        } else if (scenario === '3way-points' || scenario === '3way-set' || scenario === '2way') {
           state.matches[0].sets = [{ scoreA: 25, scoreB: 20 }, { scoreA: 25, scoreB: 21 }, { scoreA: '', scoreB: '' }];
           state.matches[1].sets = [{ scoreA: 20, scoreB: 25 }, { scoreA: 21, scoreB: 25 }, { scoreA: '', scoreB: '' }];
           state.matches[2].sets = [{ scoreA: 21, scoreB: 25 }, { scoreA: 22, scoreB: 25 }, { scoreA: '', scoreB: '' }];
-          showToast('Loaded 3-way circular tie in 3-team pool');
+          showToast('Loaded 3-way deadlock in 3-team pool');
         }
       }
 
       renderAll();
-      triggerAutoSave();
     }
+
     function escapeHtml(text) {
       if (!text) return '';
       return String(text)
@@ -1774,17 +1811,13 @@
       if (size === 3) {
         btn3.className = 'px-3 py-1.5 text-xs font-semibold rounded-md transition-all bg-white text-indigo-600 shadow-sm font-bold';
         btn4.className = 'px-3 py-1.5 text-xs font-semibold rounded-md transition-all text-slate-600 hover:text-slate-900';
-        state.teams = JSON.parse(JSON.stringify(DEFAULT_TEAMS_3));
       } else {
         btn4.className = 'px-3 py-1.5 text-xs font-semibold rounded-md transition-all bg-white text-indigo-600 shadow-sm font-bold';
         btn3.className = 'px-3 py-1.5 text-xs font-semibold rounded-md transition-all text-slate-600 hover:text-slate-900';
-        state.teams = JSON.parse(JSON.stringify(DEFAULT_TEAMS_4));
       }
 
       initializeMatches();
       renderAll();
-      triggerAutoSave();
-      showToast(`Switched to ${size}-Team Pool with tournament seeds`);
     }
 
     function renderAll(reRenderMatches = true) {
@@ -1794,10 +1827,20 @@
       }
       calculateAndRenderStandings();
     }
-    window.addEventListener('DOMContentLoaded', async () => {
+
+    window.addEventListener('DOMContentLoaded', () => {
       initializeMatches();
-      renderAll();
       setupPWA();
+
+      // Slot 1 Buttons
+      document.getElementById('btnSaveSlot1').addEventListener('click', () => saveToSlot(1));
+      document.getElementById('btnLoadSlot1').addEventListener('click', () => loadFromSlot(1));
+      document.getElementById('btnClearSlot1').addEventListener('click', () => clearSlot(1));
+
+      // Slot 2 Buttons
+      document.getElementById('btnSaveSlot2').addEventListener('click', () => saveToSlot(2));
+      document.getElementById('btnLoadSlot2').addEventListener('click', () => loadFromSlot(2));
+      document.getElementById('btnClearSlot2').addEventListener('click', () => clearSlot(2));
 
       // Pool Size Switchers
       document.getElementById('btnPool3').addEventListener('click', () => setPoolSize(3));
@@ -1808,7 +1851,6 @@
         state.matchFormat = e.target.value;
         renderMatches();
         calculateAndRenderStandings();
-        triggerAutoSave();
       });
 
       // Preset Selector
@@ -1828,8 +1870,8 @@
       // Copy Standings Button
       document.getElementById('btnCopyStandings').addEventListener('click', copyStandingsToClipboard);
 
-      // Initialize session persistence layer
-      await initCloudSync();
+      // Load initial default sample
+      loadPreset('clear');
     });
   </script>
 </body>
