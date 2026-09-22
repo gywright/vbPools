@@ -108,7 +108,8 @@
         <div class="relative inline-block text-left">
           <select id="presetSelector" class="bg-white border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-medium rounded-lg px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all cursor-pointer">
             <option value="">⚡ Load Scenario...</option>
-            <option value="one-left">🎯 1 Match Left (Path-to-Rank Analyzer)</option>
+            <option value="two-left">🎯 2 Matches Left (Scenario Analyzer)</option>
+            <option value="one-left">🎯 1 Match Left (Scenario Analyzer)</option>
             <option value="clear">Simple 1st to 4th (No Ties)</option>
             <option value="2way">2-Way Tie (H2H Decision)</option>
             <option value="3way-set">3-Way Tie broken by Set %</option>
@@ -264,7 +265,7 @@
           </div>
           <div class="p-3 bg-slate-50/50 border-t border-slate-100 text-[11px] text-slate-500 flex items-center justify-between">
             <span>Formula: <code class="font-mono bg-white px-1 py-0.5 rounded border border-slate-200">Won ÷ (Won + Lost)</code></span>
-            <span class="italic text-slate-400">Green = Advances to Gold Bracket</span>
+            <span class="italic text-slate-400">Official USAV Paper Tie-Break Rules</span>
           </div>
         </div>
 
@@ -1441,7 +1442,6 @@
       rankedList.forEach((stat, index) => {
         const rank = index + 1;
         const color = TEAM_COLORS[activePool.teams.indexOf(stat.team)];
-        const isGoldAdvancer = rank <= 2;
 
         let rankBadge = '';
         if (rank === 1) {
@@ -1455,7 +1455,7 @@
         }
 
         const tr = document.createElement('tr');
-        tr.className = `hover:bg-slate-50/80 transition-colors ${isGoldAdvancer ? 'bg-emerald-50/20' : ''}`;
+        tr.className = `hover:bg-slate-50/80 transition-colors ${rank <= 2 ? 'bg-indigo-50/20' : ''}`;
         
         tr.innerHTML = `
           <td class="py-3 px-3 text-center">
@@ -1469,8 +1469,8 @@
                   <span>${escapeHtml(stat.team.name)}</span>
                   <span class="text-[10px] text-slate-500 font-mono bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">Seed #${stat.team.seed}</span>
                 </div>
-                <div class="text-[10px] font-normal ${isGoldAdvancer ? 'text-emerald-600 font-semibold' : 'text-slate-400'}">
-                  ${isGoldAdvancer ? '★ Gold Bracket Bound' : 'Silver Bracket'}
+                <div class="text-[10px] font-mono text-slate-400">
+                  Pool Seed #${stat.team.poolSeed || (activePool.teams.indexOf(stat.team) + 1)}
                 </div>
               </div>
             </div>
@@ -1507,72 +1507,89 @@
 
     function renderAuditLog(auditLog) {
       const container = document.getElementById('tieBreakAuditContainer');
-      container.innerHTML = '';
-
+      if (!container) return;
       if (!auditLog || auditLog.length === 0) {
-        container.innerHTML = '<p class="text-slate-400 italic">No matches completed yet.</p>';
+        container.innerHTML = `<div class="p-3 rounded-xl bg-slate-50 border border-slate-100 text-slate-500 italic text-xs">No active tie-breaks required yet.</div>`;
         return;
       }
 
-      auditLog.forEach((item, idx) => {
-        const itemDiv = document.createElement('div');
-        itemDiv.className = 'p-2.5 rounded-lg bg-slate-50 border border-slate-200/80 flex items-start gap-2.5';
-        itemDiv.innerHTML = `
-          <span class="w-5 h-5 rounded-md bg-indigo-100 text-indigo-700 font-bold text-[10px] flex items-center justify-center flex-shrink-0 mt-0.5">
-            ${idx + 1}
-          </span>
-          <div class="leading-relaxed">
-            <span class="font-bold text-slate-900 block">${escapeHtml(item.step)}</span>
-            <span class="text-slate-600">${escapeHtml(item.description)}</span>
+      container.innerHTML = auditLog.map((log, idx) => `
+        <div class="p-2.5 rounded-xl border border-slate-100 bg-slate-50/70 space-y-1">
+          <div class="flex items-center gap-1.5 font-bold text-slate-800 text-xs">
+            <span class="w-4 h-4 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[10px] font-mono">${idx + 1}</span>
+            <span>${escapeHtml(log.step)}</span>
           </div>
-        `;
-        container.appendChild(itemDiv);
-      });
+          <p class="text-slate-600 pl-5 leading-relaxed text-xs">${escapeHtml(log.description)}</p>
+        </div>
+      `).join('');
     }
 
     function renderCrossMatrix(stats) {
       const table = document.getElementById('crossMatrixTable');
-      table.innerHTML = '';
-
+      if (!table) return;
       const activePool = getActivePool();
       const activeTeams = activePool.teams.slice(0, activePool.poolSize);
 
-      let thead = '<thead><tr class="bg-slate-100 text-[11px] text-slate-600 font-bold uppercase">';
-      thead += '<th class="p-2 border border-slate-200 text-left">Team</th>';
-      activeTeams.forEach(t => {
-        thead += `<th class="p-2 border border-slate-200">${escapeHtml(t.shortName || t.name)}</th>`;
+      let head = '<thead><tr class="bg-slate-50 border-b border-slate-200"><th class="p-2 text-left text-slate-500 font-bold uppercase text-[10px]">Team</th>';
+      activeTeams.forEach((t, i) => {
+        head += `<th class="p-2 text-center text-slate-600 font-bold text-[11px]" title="${escapeHtml(t.name)}">${escapeHtml(t.shortName || `T${i + 1}`)}</th>`;
       });
-      thead += '</tr></thead>';
+      head += '</tr></thead>';
 
-      let tbody = '<tbody>';
+      let body = '<tbody class="divide-y divide-slate-100">';
       activeTeams.forEach((rowTeam, rIdx) => {
-        tbody += `<tr class="hover:bg-slate-50 transition-colors">`;
-        tbody += `<td class="p-2 border border-slate-200 text-left font-bold text-slate-800 bg-slate-50/50">${escapeHtml(rowTeam.shortName || rowTeam.name)}</td>`;
+        const color = TEAM_COLORS[rIdx];
+        body += `<tr>`;
+        body += `<td class="p-2 text-left font-semibold text-slate-800 bg-slate-50/50 flex items-center gap-1.5 whitespace-nowrap">
+          <span class="w-2 h-2 rounded-full ${color.bg}"></span>
+          <span class="truncate max-w-[130px]" title="${escapeHtml(rowTeam.name)}">${escapeHtml(rowTeam.shortName || rowTeam.name)}</span>
+        </td>`;
 
         activeTeams.forEach((colTeam, cIdx) => {
           if (rowTeam.id === colTeam.id) {
-            tbody += `<td class="p-2 border border-slate-200 bg-slate-200/50 text-slate-400 font-mono text-center">—</td>`;
+            body += `<td class="p-2 text-center bg-slate-100 text-slate-300 font-mono select-none">—</td>`;
           } else {
             const h2h = getHeadToHead(rowTeam.id, colTeam.id);
-            if (!h2h.isComplete) {
-              tbody += `<td class="p-2 border border-slate-200 text-slate-400 text-center italic text-[11px]">pending</td>`;
-            } else {
+            if (h2h && h2h.isComplete) {
               const won = h2h.winner === rowTeam.id;
-              const badgeClass = won ? 'text-emerald-700 font-bold bg-emerald-50' : 'text-rose-600 bg-rose-50';
-              tbody += `
-                <td class="p-2 border border-slate-200 text-center font-mono ${badgeClass}">
-                  ${won ? 'W' : 'L'} (${h2h.setsA}-${h2h.setsB})
-                  <div class="text-[9px] text-slate-400">${h2h.pointsA}-${h2h.pointsB}</div>
-                </td>
-              `;
+              const badgeClass = won ? 'bg-emerald-100 text-emerald-800 font-bold' : 'bg-rose-50 text-rose-700';
+              body += `<td class="p-2 text-center">
+                <span class="px-1.5 py-0.5 rounded text-[11px] font-mono-num ${badgeClass}">
+                  ${h2h.setsA}-${h2h.setsB}
+                </span>
+              </td>`;
+            } else {
+              body += `<td class="p-2 text-center text-slate-400 font-mono text-[11px]">-</td>`;
             }
           }
         });
-        tbody += `</tr>`;
+        body += `</tr>`;
       });
-      tbody += '</tbody>';
+      body += '</tbody>';
 
-      table.innerHTML = thead + tbody;
+      table.innerHTML = head + body;
+    }
+
+    function getMatchPossibleOutcomes(match, activePool) {
+      const teamA = activePool.teams.find(t => t.id === match.teamAId);
+      const teamB = activePool.teams.find(t => t.id === match.teamBId);
+      const nameA = teamA ? (teamA.shortName || teamA.name) : 'Team A';
+      const nameB = teamB ? (teamB.shortName || teamB.name) : 'Team B';
+
+      if (activePool.matchFormat === '2sets') {
+        return [
+          { label: `M#${match.matchNum}: ${nameA} 2-0`, shortTag: `${nameA} 2-0`, matchId: match.id, sets: [{ scoreA: 25, scoreB: 20 }, { scoreA: 25, scoreB: 20 }] },
+          { label: `M#${match.matchNum}: Split 1-1`, shortTag: `Split 1-1`, matchId: match.id, sets: [{ scoreA: 25, scoreB: 20 }, { scoreA: 20, scoreB: 25 }] },
+          { label: `M#${match.matchNum}: ${nameB} 2-0`, shortTag: `${nameB} 2-0`, matchId: match.id, sets: [{ scoreA: 20, scoreB: 25 }, { scoreA: 20, scoreB: 25 }] }
+        ];
+      }
+
+      return [
+        { label: `M#${match.matchNum}: ${nameA} 2-0`, shortTag: `${nameA} 2-0`, matchId: match.id, sets: [{ scoreA: 25, scoreB: 20 }, { scoreA: 25, scoreB: 20 }, { scoreA: '', scoreB: '' }] },
+        { label: `M#${match.matchNum}: ${nameA} 2-1`, shortTag: `${nameA} 2-1`, matchId: match.id, sets: [{ scoreA: 25, scoreB: 20 }, { scoreA: 20, scoreB: 25 }, { scoreA: 15, scoreB: 12 }] },
+        { label: `M#${match.matchNum}: ${nameB} 2-1`, shortTag: `${nameB} 2-1`, matchId: match.id, sets: [{ scoreA: 20, scoreB: 25 }, { scoreA: 25, scoreB: 20 }, { scoreA: 12, scoreB: 15 }] },
+        { label: `M#${match.matchNum}: ${nameB} 2-0`, shortTag: `${nameB} 2-0`, matchId: match.id, sets: [{ scoreA: 20, scoreB: 25 }, { scoreA: 20, scoreB: 25 }, { scoreA: '', scoreB: '' }] }
+      ];
     }
 
     function analyzeFinalMatchScenarios() {
@@ -1580,36 +1597,46 @@
       const activeTeams = activePool.teams.slice(0, activePool.poolSize);
       const incompleteMatches = activePool.matches.filter(m => !computeSingleMatchResult(m).isComplete);
 
-      if (incompleteMatches.length !== 1) {
+      if (incompleteMatches.length !== 1 && incompleteMatches.length !== 2) {
         return null;
       }
 
-      const finalMatch = incompleteMatches[0];
-      const teamA = activePool.teams.find(t => t.id === finalMatch.teamAId);
-      const teamB = activePool.teams.find(t => t.id === finalMatch.teamBId);
+      let combinations = [];
 
-      let possibleOutcomes = [];
-      if (activePool.matchFormat === '2sets') {
-        possibleOutcomes = [
-          { label: `${teamA.shortName || teamA.name} wins 2-0`, sets: [{ scoreA: 25, scoreB: 20 }, { scoreA: 25, scoreB: 20 }] },
-          { label: `Split 1-1 (${teamA.shortName} 1, ${teamB.shortName} 1)`, sets: [{ scoreA: 25, scoreB: 20 }, { scoreA: 20, scoreB: 25 }] },
-          { label: `${teamB.shortName || teamB.name} wins 2-0`, sets: [{ scoreA: 20, scoreB: 25 }, { scoreA: 20, scoreB: 25 }] }
-        ];
+      if (incompleteMatches.length === 1) {
+        const m1 = incompleteMatches[0];
+        const m1Outcomes = getMatchPossibleOutcomes(m1, activePool);
+        combinations = m1Outcomes.map(o => ({
+          label: o.label,
+          shortTag: o.shortTag,
+          assignments: [o]
+        }));
       } else {
-        possibleOutcomes = [
-          { key: 'A_2_0', label: `${teamA.shortName || teamA.name} wins 2-0`, tag: '2-0', sets: [{ scoreA: 25, scoreB: 20 }, { scoreA: 25, scoreB: 20 }, { scoreA: '', scoreB: '' }] },
-          { key: 'A_2_1', label: `${teamA.shortName || teamA.name} wins 2-1`, tag: '2-1', sets: [{ scoreA: 25, scoreB: 20 }, { scoreA: 20, scoreB: 25 }, { scoreA: 15, scoreB: 12 }] },
-          { key: 'B_2_1', label: `${teamB.shortName || teamB.name} wins 2-1`, tag: '1-2', sets: [{ scoreA: 20, scoreB: 25 }, { scoreA: 25, scoreB: 20 }, { scoreA: 12, scoreB: 15 }] },
-          { key: 'B_2_0', label: `${teamB.shortName || teamB.name} wins 2-0`, tag: '0-2', sets: [{ scoreA: 20, scoreB: 25 }, { scoreA: 20, scoreB: 25 }, { scoreA: '', scoreB: '' }] }
-        ];
+        const m1 = incompleteMatches[0];
+        const m2 = incompleteMatches[1];
+        const m1Outcomes = getMatchPossibleOutcomes(m1, activePool);
+        const m2Outcomes = getMatchPossibleOutcomes(m2, activePool);
+
+        m1Outcomes.forEach(o1 => {
+          m2Outcomes.forEach(o2 => {
+            combinations.push({
+              label: `${o1.label} & ${o2.label}`,
+              shortTag: `${o1.shortTag} | ${o2.shortTag}`,
+              assignments: [o1, o2]
+            });
+          });
+        });
       }
 
-      const outcomeResults = possibleOutcomes.map(outcome => {
+      const outcomeResults = combinations.map(combo => {
+        const assignmentMap = new Map();
+        combo.assignments.forEach(a => assignmentMap.set(a.matchId, a.sets));
+
         const simMatches = activePool.matches.map(m => {
-          if (m.id === finalMatch.id) {
+          if (assignmentMap.has(m.id)) {
             return {
               ...m,
-              sets: outcome.sets.map(s => ({ ...s }))
+              sets: assignmentMap.get(m.id).map(s => ({ ...s }))
             };
           }
           return {
@@ -1630,27 +1657,40 @@
         });
 
         return {
-          outcome,
+          combo,
           rankedList,
           teamRanks
         };
       });
 
+      const totalScenarios = outcomeResults.length;
       const teamRequirements = activeTeams.map(t => {
-        const ranksAchievable = {};
+        const rankOccurrences = {};
         outcomeResults.forEach(res => {
-          const rank = res.teamRanks[t.id];
-          if (!ranksAchievable[rank]) ranksAchievable[rank] = [];
-          ranksAchievable[rank].push(res.outcome.label);
+          const r = res.teamRanks[t.id];
+          if (!rankOccurrences[r]) rankOccurrences[r] = [];
+          rankOccurrences[r].push(res.combo.shortTag);
         });
 
         const descriptions = [];
         for (let r = 1; r <= activeTeams.length; r++) {
-          if (ranksAchievable[r]) {
-            if (ranksAchievable[r].length === outcomeResults.length) {
-              descriptions.push({ rank: r, text: `<strong class="text-indigo-600">Locked in #${r}</strong> (outcome of Match #${finalMatch.matchNum} will not change this rank).` });
+          const list = rankOccurrences[r];
+          if (list && list.length > 0) {
+            if (list.length === totalScenarios) {
+              descriptions.push({
+                rank: r,
+                text: `<strong class="text-indigo-600">Locked in #${r}</strong> (remaining matches will not alter this finish).`
+              });
+            } else if (incompleteMatches.length === 1 || list.length <= 3) {
+              descriptions.push({
+                rank: r,
+                text: `Finishes <strong class="text-slate-900">#${r}</strong> if: ${list.join(' OR ')}.`
+              });
             } else {
-              descriptions.push({ rank: r, text: `Finishes <strong class="text-slate-900">#${r}</strong> if: ${ranksAchievable[r].join(' OR ')}.` });
+              descriptions.push({
+                rank: r,
+                text: `Finishes <strong class="text-slate-900">#${r}</strong> in <strong class="text-slate-900">${list.length} of ${totalScenarios}</strong> scenarios (e.g., ${list.slice(0, 2).join('; ')}...).`
+              });
             }
           }
         }
@@ -1658,14 +1698,12 @@
         return {
           team: t,
           descriptions,
-          ranksAchievable
+          rankOccurrences
         };
       });
 
       return {
-        finalMatch,
-        teamA,
-        teamB,
+        incompleteMatches,
         outcomeResults,
         teamRequirements
       };
@@ -1683,10 +1721,16 @@
 
       card.classList.remove('hidden');
 
-      const { finalMatch, teamA, teamB, outcomeResults, teamRequirements } = analysis;
+      const { incompleteMatches, outcomeResults, teamRequirements } = analysis;
       const activePool = getActivePool();
 
-      let matrixHeaders = '<th class="p-2.5 text-left text-[11px] font-bold text-slate-600 uppercase bg-slate-100">Possible Result</th>';
+      const matchTitles = incompleteMatches.map(m => {
+        const tA = activePool.teams.find(t => t.id === m.teamAId);
+        const tB = activePool.teams.find(t => t.id === m.teamBId);
+        return `Match #${m.matchNum} (${escapeHtml(tA?.shortName || tA?.name || 'A')} vs ${escapeHtml(tB?.shortName || tB?.name || 'B')})`;
+      }).join(' & ');
+
+      let matrixHeaders = '<th class="p-2.5 text-left text-[11px] font-bold text-slate-600 uppercase bg-slate-100">Simulated Outcome</th>';
       activePool.teams.slice(0, activePool.poolSize).forEach(t => {
         matrixHeaders += `<th class="p-2.5 text-center text-[11px] font-bold text-slate-700 uppercase bg-slate-100">${escapeHtml(t.shortName || t.name)}</th>`;
       });
@@ -1694,7 +1738,7 @@
 
       let matrixRows = '';
       outcomeResults.forEach((res, idx) => {
-        let cells = `<td class="p-2.5 font-bold text-xs text-slate-800 border-b border-slate-100">${escapeHtml(res.outcome.label)}</td>`;
+        let cells = `<td class="p-2.5 font-bold text-xs text-slate-800 border-b border-slate-100">${escapeHtml(res.combo.label)}</td>`;
         activePool.teams.slice(0, activePool.poolSize).forEach(t => {
           const r = res.teamRanks[t.id];
           let badge = '';
@@ -1707,7 +1751,7 @@
 
         cells += `
           <td class="p-2.5 text-center border-b border-slate-100">
-            <button onclick="window.applySimulatedOutcome(${idx})" class="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg transition-colors">
+            <button onclick="window.applySimulatedOutcome(${idx})" class="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg transition-colors whitespace-nowrap">
               ⚡ Test Score
             </button>
           </td>
@@ -1740,9 +1784,9 @@
               </div>
               <div>
                 <h3 class="text-sm font-extrabold tracking-tight text-white flex items-center gap-2">
-                  Final Match Remaining: Match #${finalMatch.matchNum} (${escapeHtml(teamA.shortName || teamA.name)} vs ${escapeHtml(teamB.shortName || teamB.name)})
+                  ${incompleteMatches.length === 1 ? '1 Match Remaining' : '2 Matches Remaining'}: ${matchTitles}
                 </h3>
-                <p class="text-xs text-indigo-200">What is needed for each team to finish in each rank</p>
+                <p class="text-xs text-indigo-200">What is needed for each team to finish in each rank across ${outcomeResults.length} possible outcome(s)</p>
               </div>
             </div>
             <span class="text-[11px] font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30 px-2.5 py-1 rounded-full">
@@ -1756,12 +1800,12 @@
 
           <div class="bg-white rounded-xl overflow-hidden text-slate-800 shadow-sm border border-slate-200 mt-3">
             <div class="px-4 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-              <span class="text-xs font-bold text-slate-700 uppercase tracking-wider">Final Outcome Simulation Matrix</span>
+              <span class="text-xs font-bold text-slate-700 uppercase tracking-wider">Final Outcome Simulation Matrix (${outcomeResults.length} Scenarios)</span>
               <span class="text-[11px] text-slate-500">Click "Test Score" to preview live standings</span>
             </div>
-            <div class="overflow-x-auto">
+            <div class="overflow-x-auto max-h-72 custom-scrollbar">
               <table class="w-full text-left border-collapse">
-                <thead>
+                <thead class="sticky top-0 shadow-xs">
                   <tr>${matrixHeaders}</tr>
                 </thead>
                 <tbody>
@@ -1778,13 +1822,19 @@
       const analysis = analyzeFinalMatchScenarios();
       if (!analysis || !analysis.outcomeResults[outcomeIndex]) return;
 
-      const simOutcome = analysis.outcomeResults[outcomeIndex].outcome;
-      const finalMatch = analysis.finalMatch;
+      const activePool = getActivePool();
+      const simCombo = analysis.outcomeResults[outcomeIndex].combo;
 
-      finalMatch.sets = simOutcome.sets.map(s => ({ ...s }));
+      simCombo.assignments.forEach(assignment => {
+        const match = activePool.matches.find(m => m.id === assignment.matchId);
+        if (match) {
+          match.sets = assignment.sets.map(s => ({ ...s }));
+        }
+      });
+
       renderAll();
       triggerAutoSave();
-      showToast(`Applied: ${simOutcome.label}`);
+      showToast(`Applied: ${simCombo.label}`);
     };
 
     function parseAndApplyAESJson(jsonText) {
@@ -1891,7 +1941,15 @@
       }
 
       if (activePool.poolSize === 4) {
-        if (scenario === 'one-left') {
+        if (scenario === 'two-left') {
+          activePool.matches[0].sets = [{ scoreA: 25, scoreB: 18 }, { scoreA: 25, scoreB: 20 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[1].sets = [{ scoreA: 25, scoreB: 15 }, { scoreA: 25, scoreB: 19 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[2].sets = [{ scoreA: 25, scoreB: 12 }, { scoreA: 25, scoreB: 16 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[3].sets = [{ scoreA: 25, scoreB: 22 }, { scoreA: 25, scoreB: 23 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[4].sets = [{ scoreA: '', scoreB: '' }, { scoreA: '', scoreB: '' }, { scoreA: '', scoreB: '' }];
+          activePool.matches[5].sets = [{ scoreA: '', scoreB: '' }, { scoreA: '', scoreB: '' }, { scoreA: '', scoreB: '' }];
+          showToast('Loaded scenario with Matches #5 & #6 remaining!');
+        } else if (scenario === 'one-left') {
           activePool.matches[0].sets = [{ scoreA: 25, scoreB: 18 }, { scoreA: 25, scoreB: 20 }, { scoreA: '', scoreB: '' }];
           activePool.matches[1].sets = [{ scoreA: 25, scoreB: 15 }, { scoreA: 25, scoreB: 19 }, { scoreA: '', scoreB: '' }];
           activePool.matches[2].sets = [{ scoreA: 25, scoreB: 12 }, { scoreA: 25, scoreB: 16 }, { scoreA: '', scoreB: '' }];
@@ -1934,7 +1992,12 @@
         }
       } else {
         // 3-team pool presets
-        if (scenario === 'one-left') {
+        if (scenario === 'two-left') {
+          activePool.matches[0].sets = [{ scoreA: 25, scoreB: 19 }, { scoreA: 25, scoreB: 21 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[1].sets = [{ scoreA: '', scoreB: '' }, { scoreA: '', scoreB: '' }, { scoreA: '', scoreB: '' }];
+          activePool.matches[2].sets = [{ scoreA: '', scoreB: '' }, { scoreA: '', scoreB: '' }, { scoreA: '', scoreB: '' }];
+          showToast('Loaded 3-team scenario with Matches #2 & #3 remaining!');
+        } else if (scenario === 'one-left') {
           activePool.matches[0].sets = [{ scoreA: 25, scoreB: 19 }, { scoreA: 25, scoreB: 21 }, { scoreA: '', scoreB: '' }];
           activePool.matches[1].sets = [{ scoreA: 25, scoreB: 20 }, { scoreA: 25, scoreB: 22 }, { scoreA: '', scoreB: '' }];
           activePool.matches[2].sets = [{ scoreA: '', scoreB: '' }, { scoreA: '', scoreB: '' }, { scoreA: '', scoreB: '' }];
