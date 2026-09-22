@@ -12,7 +12,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="AES Calc">
   <meta name="application-name" content="AES Calc">
-  <meta name="description" content="Official USAV and AES Volleyball Pool Rank and Tie-Break Calculator with session persistence.">
+  <meta name="description" content="Official USAV and AES Volleyball Pool Rank and Tie-Break Calculator with real-time multi-pool tracking.">
 
   <!-- Manifest Link dynamically populated by JS -->
   <link rel="manifest" id="dynamicManifest">
@@ -26,6 +26,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
   <style>
     body {
       font-family: 'Inter', sans-serif;
@@ -87,6 +88,12 @@
           Install App
         </button>
 
+        <!-- Import AES JSON Modal Trigger -->
+        <button id="btnOpenImportModal" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors">
+          <svg class="w-3.5 h-3.5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+          Import AES JSON
+        </button>
+
         <!-- Pool Size Switcher -->
         <div class="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-100">
           <button id="btnPool3" class="px-3 py-1.5 text-xs font-semibold rounded-md transition-all text-slate-600 hover:text-slate-900">
@@ -96,6 +103,8 @@
             4-Team Pool
           </button>
         </div>
+
+        <!-- Presets -->
         <div class="relative inline-block text-left">
           <select id="presetSelector" class="bg-white border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-medium rounded-lg px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all cursor-pointer">
             <option value="">⚡ Load Scenario...</option>
@@ -104,7 +113,7 @@
             <option value="2way">2-Way Tie (H2H Decision)</option>
             <option value="3way-set">3-Way Tie broken by Set %</option>
             <option value="3way-points">3-Way Tie broken by Point %</option>
-            <option value="reset-defaults">↺ Reset to Tournament Default Teams</option>
+            <option value="reset-defaults">↺ Reset to Division Rosters</option>
             <option value="empty">Clear All Scores</option>
           </select>
         </div>
@@ -112,6 +121,30 @@
         <button id="btnReset" title="Clear current match scores" class="p-2 text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 rounded-lg transition-colors">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
         </button>
+      </div>
+    </div>
+
+    <!-- Active Division / Pool Tabs -->
+    <div class="bg-slate-100 border-t border-slate-200 px-4 sm:px-6 lg:px-8 py-2">
+      <div class="max-w-7xl mx-auto flex items-center justify-between flex-wrap gap-2">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Tournament Pools:</span>
+          <div class="inline-flex rounded-xl p-1 bg-slate-200/80 gap-1.5" id="poolTabsContainer">
+            <button id="tabPool18" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-white text-indigo-700 shadow-sm">
+              <span class="w-2.5 h-2.5 rounded-full bg-[#7F5FFF]"></span>
+              <span>18 Boys: Bay to Bay 16-Premier</span>
+              <span class="text-[10px] bg-indigo-100 text-indigo-800 px-1.5 py-0.2 rounded font-mono">3 Teams</span>
+            </button>
+            <button id="tabPool14" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-600 hover:text-slate-900">
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+              <span>14 Boys: Bay to Bay 12-1</span>
+              <span class="text-[10px] bg-slate-200 text-slate-700 px-1.5 py-0.2 rounded font-mono">4 Teams</span>
+            </button>
+          </div>
+        </div>
+        <div id="divisionInfoBadge" class="text-xs text-slate-600 flex items-center gap-2">
+          <!-- Updated dynamically by JS -->
+        </div>
       </div>
     </div>
   </header>
@@ -130,10 +163,11 @@
           2) <strong class="text-indigo-900">Head-to-Head</strong> (if 2 teams tied) &rarr;
           3) <strong class="text-indigo-900">Set %</strong> among tied teams (Sets Won / Total Sets Played) &rarr;
           4) <strong class="text-indigo-900">Point %</strong> among tied teams (Points Scored / Total Points Played) &rarr;
-          5) Coin Toss. <span class="text-slate-500 italic">No tie-break playoff sets are played. Every point scored counts! Scores are automatically saved between sessions.</span>
+          5) Coin Toss. <span class="text-slate-500 italic">No tie-break playoff sets are played. Every point scored counts! Scores are saved across browser sessions.</span>
         </div>
       </div>
     </div>
+
     <!-- Final Match Path-to-Rank Scenario Analyzer (Shown when 1 match remains) -->
     <div id="finalMatchScenarioCard" class="hidden transition-all">
       <!-- Injected dynamically by JS -->
@@ -168,6 +202,7 @@
             <!-- Injected by JS -->
           </div>
         </div>
+
         <!-- Match Schedule & Score Entry -->
         <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-5">
           <div class="flex items-center justify-between mb-4">
@@ -176,10 +211,10 @@
                 <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
                 Match Scores
               </h2>
-              <p class="text-xs text-slate-500">Scores auto-save across sessions. Set 3 unlocks if sets are split 1-1.</p>
+              <p class="text-xs text-slate-500">Stacked scoreboard entry. Set 3 unlocks if sets are split 1-1.</p>
             </div>
             <span id="matchProgressBadge" class="text-xs px-2.5 py-1 rounded-full font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-              0 / 6 Matches Complete
+              0 / 3 Matches Complete
             </span>
           </div>
 
@@ -206,6 +241,7 @@
               Copy Text
             </button>
           </div>
+
           <!-- Standings Table -->
           <div class="overflow-x-auto custom-scrollbar">
             <table class="w-full text-left border-collapse">
@@ -264,39 +300,105 @@
     </div>
   </main>
 
+  <!-- AES JSON Import Modal -->
+  <div id="importModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div class="flex items-center gap-2.5">
+          <span class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-base">📋</span>
+          <div>
+            <h3 class="font-extrabold text-sm text-slate-900">Import AES Team / Pool JSON</h3>
+            <p class="text-xs text-slate-500">Paste JSON from AES API (e.g. results.advancedeventsystems.com/api/...)</p>
+          </div>
+        </div>
+        <button id="btnCloseImportModal" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="space-y-2">
+        <label for="importJsonInput" class="text-xs font-semibold text-slate-700">Paste JSON Object or Array:</label>
+        <textarea id="importJsonInput" rows="6" class="w-full text-xs font-mono p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder='{"TeamId":17540,"TeamName":"Bay to Bay 16-Premier","TeamText":"Bay to Bay 16-Premier (NC) (66)", "OpponentTeamName":"Slainte 18-Cobalt", "OpponentTeamText":"Slainte 18-Cobalt (NC) (70)"...}'></textarea>
+        <p class="text-[11px] text-slate-400">Supports single team endpoints, opponent pairs, or arrays of teams.</p>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-2">
+        <button id="btnCancelImport" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+          Cancel
+        </button>
+        <button id="btnExecuteImport" class="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-all">
+          Apply to Current Pool
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Notification Toast Container -->
   <div id="toastNotification" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 pointer-events-none transition-all duration-300 bg-slate-900 text-white text-xs font-medium px-4 py-2.5 rounded-xl shadow-xl flex items-center gap-2">
     <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
     <span id="toastMessage">Action completed</span>
   </div>
 
-  <!-- Firebase SDK Modules for Session-to-Session Persistence -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    // Standard Tournament Team Templates specified by tournament director
-    const DEFAULT_TEAMS_3 = [
-      { id: 'T1', seed: 66, poolSeed: 1, name: 'Bay to Bay 16-Premier (66)', shortName: 'B2B 16-Prem (66)' },
-      { id: 'T2', seed: 72, poolSeed: 2, name: 'FPVC 17-1 (72)', shortName: 'FPVC 17-1 (72)' },
-      { id: 'T3', seed: 83, poolSeed: 3, name: 'Golden State 18 Gold (83)', shortName: 'Golden State 18G (83)' }
-    ];
-
-    const DEFAULT_TEAMS_4 = [
-      { id: 'T1', seed: 8,  poolSeed: 1, name: 'MVVC B 14 White (8)', shortName: 'MVVC 14W (8)' },
-      { id: 'T2', seed: 9,  poolSeed: 2, name: 'SF Elite B 14 Gold (9)', shortName: 'SF Elite 14G (9)' },
-      { id: 'T3', seed: 23, poolSeed: 3, name: 'Bay to Bay 12-1 (23)', shortName: 'B2B 12-1 (23)' },
-      { id: 'T4', seed: 26, poolSeed: 4, name: 'SF Elite B 13 Navy (26)', shortName: 'SF Elite 13N (26)' }
-    ];
-
-    // State management
-    const state = {
-      poolSize: 4, // 3 or 4
-      matchFormat: 'best2of3', // 'best2of3', '2sets', 'best3of5'
-      teams: JSON.parse(JSON.stringify(DEFAULT_TEAMS_4)),
-      matches: []
+    // Official Pools extracted directly from AES API JSON
+    const POOL_PRESETS = {
+      'pool-18b': {
+        id: 'pool-18b',
+        division: '18 Boys',
+        divisionColor: '#7F5FFF',
+        teamCount: 111,
+        defaultPoolSize: 3,
+        name: '18 Boys: Bay to Bay 16-Premier',
+        teams: [
+          { id: 'T1', seed: 66, poolSeed: 1, name: 'Bay to Bay 16-Premier (66)', shortName: 'B2B 16-Prem (66)' },
+          { id: 'T2', seed: 70, poolSeed: 2, name: 'Slainte 18-Cobalt (70)', shortName: 'Slainte 18-Cobalt (70)' },
+          { id: 'T3', seed: 83, poolSeed: 3, name: 'Golden State 18 Gold (83)', shortName: 'Golden State 18G (83)' },
+          { id: 'T4', seed: 88, poolSeed: 4, name: 'FPVC 17-1 (88)', shortName: 'FPVC 17-1 (88)' }
+        ]
+      },
+      'pool-14b': {
+        id: 'pool-14b',
+        division: '14 Boys',
+        divisionColor: '#EAB308',
+        teamCount: 56,
+        defaultPoolSize: 4,
+        name: '14 Boys: Bay to Bay 12-1',
+        teams: [
+          { id: 'T1', seed: 19, poolSeed: 1, name: 'MVVC B 12 Red (19)', shortName: 'MVVC 12 Red (19)' },
+          { id: 'T2', seed: 23, poolSeed: 2, name: 'Bay to Bay 12-1 (23)', shortName: 'B2B 12-1 (23)' },
+          { id: 'T3', seed: 26, poolSeed: 3, name: 'SF Elite B 13 Navy (26)', shortName: 'SF Elite 13N (26)' },
+          { id: 'T4', seed: 9,  poolSeed: 4, name: 'SF Elite B 14 Gold (9)', shortName: 'SF Elite 14G (9)' }
+        ]
+      }
     };
+
+    // State management supporting multiple pools
+    const state = {
+      activePoolId: 'pool-18b', // 'pool-18b' or 'pool-14b'
+      poolData: {
+        'pool-18b': {
+          poolSize: 3,
+          matchFormat: 'best2of3',
+          teams: JSON.parse(JSON.stringify(POOL_PRESETS['pool-18b'].teams)),
+          matches: []
+        },
+        'pool-14b': {
+          poolSize: 4,
+          matchFormat: 'best2of3',
+          teams: JSON.parse(JSON.stringify(POOL_PRESETS['pool-14b'].teams)),
+          matches: []
+        }
+      }
+    };
+
+    // Convenience accessor for active pool
+    function getActivePool() {
+      return state.poolData[state.activePoolId];
+    }
 
     // Standard schedule pairings for 3 and 4 team pools (AES / USAV Standard pool scheduling order)
     const POOL_SCHEDULES = {
@@ -321,7 +423,8 @@
       { bg: 'bg-purple-600', light: 'bg-purple-50 text-purple-700 border-purple-200', text: 'text-purple-600' },
       { bg: 'bg-amber-600', light: 'bg-amber-50 text-amber-700 border-amber-200', text: 'text-amber-600' }
     ];
-    // Persistence Layer Setup (Strictly Firestore Rule 1 & Rule 3 compliant)
+
+    // Persistence Layer Setup
     let db = null;
     let auth = null;
     let currentUserId = null;
@@ -336,7 +439,6 @@
           auth = getAuth(app);
           db = getFirestore(app);
 
-          // Authenticate first before any read/write operations
           if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
             await signInWithCustomToken(auth, __initial_auth_token);
           } else {
@@ -380,13 +482,10 @@
       saveTimeout = setTimeout(async () => {
         try {
           if (!currentUserId || !db) return;
-          // RULE 1: Private user data path
           const stateDocRef = doc(db, 'artifacts', appId, 'users', currentUserId, 'poolState', 'activeSession');
           const payload = {
-            poolSize: state.poolSize,
-            matchFormat: state.matchFormat,
-            teams: JSON.stringify(state.teams),
-            matches: JSON.stringify(state.matches),
+            activePoolId: state.activePoolId,
+            poolData: JSON.stringify(state.poolData),
             updatedAt: Date.now()
           };
           await setDoc(stateDocRef, payload);
@@ -411,34 +510,22 @@
         const docSnap = await getDoc(stateDocRef);
         if (docSnap.exists()) {
           const data = docSnap.data();
-          if (data && data.poolSize) {
-            state.poolSize = data.poolSize;
-            state.matchFormat = data.matchFormat || 'best2of3';
-            if (data.teams) state.teams = JSON.parse(data.teams);
-            if (data.matches) state.matches = JSON.parse(data.matches);
-
-            // Update Format dropdown and size buttons
-            const formatSelect = document.getElementById('matchFormat');
-            if (formatSelect) formatSelect.value = state.matchFormat;
-
-            const btn3 = document.getElementById('btnPool3');
-            const btn4 = document.getElementById('btnPool4');
-            if (state.poolSize === 3) {
-              btn3.className = 'px-3 py-1.5 text-xs font-semibold rounded-md transition-all bg-white text-indigo-600 shadow-sm font-bold';
-              btn4.className = 'px-3 py-1.5 text-xs font-semibold rounded-md transition-all text-slate-600 hover:text-slate-900';
-            } else {
-              btn4.className = 'px-3 py-1.5 text-xs font-semibold rounded-md transition-all bg-white text-indigo-600 shadow-sm font-bold';
-              btn3.className = 'px-3 py-1.5 text-xs font-semibold rounded-md transition-all text-slate-600 hover:text-slate-900';
+          if (data && data.poolData) {
+            const parsedData = JSON.parse(data.poolData);
+            state.poolData = parsedData;
+            if (data.activePoolId && state.poolData[data.activePoolId]) {
+              state.activePoolId = data.activePoolId;
             }
-
+            syncUIWithActivePool();
             renderAll();
-            showToast('Restored saved tournament session scores!');
+            showToast('Restored saved tournament pool sessions!');
           }
         }
       } catch (err) {
         console.warn('Could not load existing session:', err);
       }
     }
+
     function setupPWA() {
       const manifestData = {
         name: "AES Volleyball Pool Calculator",
@@ -476,7 +563,7 @@
       if ('serviceWorker' in navigator) {
         try {
           const swCode = `
-            const CACHE_NAME = 'aes-calc-v2';
+            const CACHE_NAME = 'aes-calc-v3';
             self.addEventListener('install', (e) => self.skipWaiting());
             self.addEventListener('activate', (e) => e.waitUntil(clients.claim()));
             self.addEventListener('fetch', (e) => {
@@ -518,9 +605,11 @@
         });
       }
     }
-    function initializeMatches() {
-      const schedule = POOL_SCHEDULES[state.poolSize];
-      state.matches = schedule.map(item => {
+
+    function initializeMatchesForPool(poolId) {
+      const p = state.poolData[poolId];
+      const schedule = POOL_SCHEDULES[p.poolSize];
+      p.matches = schedule.map(item => {
         return {
           id: `M${item.matchNum}`,
           matchNum: item.matchNum,
@@ -534,6 +623,59 @@
           ]
         };
       });
+    }
+
+    function switchActivePool(poolId) {
+      if (state.activePoolId === poolId) return;
+      state.activePoolId = poolId;
+      syncUIWithActivePool();
+      renderAll();
+      triggerAutoSave();
+      showToast(`Switched to ${POOL_PRESETS[poolId].name}`);
+    }
+
+    function syncUIWithActivePool() {
+      const activePool = getActivePool();
+      const presetInfo = POOL_PRESETS[state.activePoolId];
+
+      // Update division info badge
+      const divisionBadge = document.getElementById('divisionInfoBadge');
+      if (divisionBadge) {
+        divisionBadge.innerHTML = `
+          <span class="inline-flex items-center gap-1.5 font-semibold text-slate-700">
+            <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${presetInfo.divisionColor}"></span>
+            ${presetInfo.division} Division (${presetInfo.teamCount} Teams)
+          </span>
+          <span class="text-slate-300">•</span>
+          <span class="font-mono text-slate-500">${activePool.poolSize}-Team Round Robin</span>
+        `;
+      }
+
+      // Update tab button styles
+      const tab18 = document.getElementById('tabPool18');
+      const tab14 = document.getElementById('tabPool14');
+      if (state.activePoolId === 'pool-18b') {
+        tab18.className = 'flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-white text-indigo-700 shadow-sm';
+        tab14.className = 'flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-600 hover:text-slate-900';
+      } else {
+        tab14.className = 'flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-white text-amber-700 shadow-sm';
+        tab18.className = 'flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-600 hover:text-slate-900';
+      }
+
+      // Update pool size buttons
+      const btn3 = document.getElementById('btnPool3');
+      const btn4 = document.getElementById('btnPool4');
+      if (activePool.poolSize === 3) {
+        btn3.className = 'px-3 py-1.5 text-xs font-semibold rounded-md transition-all bg-white text-indigo-600 shadow-sm font-bold';
+        btn4.className = 'px-3 py-1.5 text-xs font-semibold rounded-md transition-all text-slate-600 hover:text-slate-900';
+      } else {
+        btn4.className = 'px-3 py-1.5 text-xs font-semibold rounded-md transition-all bg-white text-indigo-600 shadow-sm font-bold';
+        btn3.className = 'px-3 py-1.5 text-xs font-semibold rounded-md transition-all text-slate-600 hover:text-slate-900';
+      }
+
+      // Update format selector
+      const formatSelect = document.getElementById('matchFormat');
+      if (formatSelect) formatSelect.value = activePool.matchFormat;
     }
 
     function updateTeamLabels(teamId, displayName, shortName) {
@@ -552,7 +694,9 @@
       const container = document.getElementById('teamInputGrid');
       container.innerHTML = '';
 
-      const activeTeams = state.teams.slice(0, state.poolSize);
+      const activePool = getActivePool();
+      const activeTeams = activePool.teams.slice(0, activePool.poolSize);
+
       activeTeams.forEach((team, index) => {
         const color = TEAM_COLORS[index];
         const div = document.createElement('div');
@@ -576,7 +720,7 @@
       container.querySelectorAll('.team-name-input').forEach(input => {
         input.addEventListener('input', (e) => {
           const tId = e.target.getAttribute('data-team-id');
-          const t = state.teams.find(item => item.id === tId);
+          const t = activePool.teams.find(item => item.id === tId);
           if (t) {
             t.name = e.target.value;
             const effectiveName = t.name.trim() || `Team ${t.poolSeed || t.seed}`;
@@ -588,20 +732,22 @@
         });
       });
     }
+
     function renderMatches() {
       const container = document.getElementById('matchesContainer');
       container.innerHTML = '';
 
-      const maxSets = state.matchFormat === '2sets' ? 2 : (state.matchFormat === 'best3of5' ? 5 : 3);
+      const activePool = getActivePool();
+      const maxSets = activePool.matchFormat === '2sets' ? 2 : (activePool.matchFormat === 'best3of5' ? 5 : 3);
       let completedMatchesCount = 0;
 
-      state.matches.forEach((match, mIdx) => {
-        const teamA = state.teams.find(t => t.id === match.teamAId);
-        const teamB = state.teams.find(t => t.id === match.teamBId);
-        const refTeam = state.teams.find(t => t.id === match.refId);
+      activePool.matches.forEach((match, mIdx) => {
+        const teamA = activePool.teams.find(t => t.id === match.teamAId);
+        const teamB = activePool.teams.find(t => t.id === match.teamBId);
+        const refTeam = activePool.teams.find(t => t.id === match.refId);
 
-        const colorA = TEAM_COLORS[state.teams.indexOf(teamA)];
-        const colorB = TEAM_COLORS[state.teams.indexOf(teamB)];
+        const colorA = TEAM_COLORS[activePool.teams.indexOf(teamA)];
+        const colorB = TEAM_COLORS[activePool.teams.indexOf(teamB)];
 
         const matchResult = computeSingleMatchResult(match);
         if (matchResult.isComplete) completedMatchesCount++;
@@ -629,7 +775,7 @@
 
         // Determine if Set 3 is disabled (ONLY if match was already cleanly won 2-0)
         let set3Disabled = false;
-        if (state.matchFormat === 'best2of3') {
+        if (activePool.matchFormat === 'best2of3') {
           const s1 = match.sets[0];
           const s2 = match.sets[1];
           const s1Done = isSetComplete(s1?.scoreA, s1?.scoreB, 25);
@@ -648,14 +794,14 @@
 
         let headerCols = '';
         for (let s = 0; s < maxSets; s++) {
-          const isDeciding = (state.matchFormat === 'best2of3' && s === 2) || (state.matchFormat === 'best3of5' && s === 4);
+          const isDeciding = (activePool.matchFormat === 'best2of3' && s === 2) || (activePool.matchFormat === 'best3of5' && s === 4);
           headerCols += `<th class="w-14 text-center py-1 text-[11px] font-bold text-slate-500 uppercase">Set ${s + 1}${isDeciding ? ' <span class="text-[9px] text-amber-600">(15)</span>' : ''}</th>`;
         }
 
         function getSetWinner(sIdx) {
           const sObj = match.sets[sIdx];
           if (!sObj) return null;
-          const target = (state.matchFormat === 'best2of3' && sIdx === 2) || (state.matchFormat === 'best3of5' && sIdx === 4) ? 15 : 25;
+          const target = (activePool.matchFormat === 'best2of3' && sIdx === 2) || (activePool.matchFormat === 'best3of5' && sIdx === 4) ? 15 : 25;
           if (isSetComplete(sObj.scoreA, sObj.scoreB, target)) {
             return Number(sObj.scoreA) > Number(sObj.scoreB) ? 'A' : 'B';
           }
@@ -668,7 +814,7 @@
         for (let s = 0; s < maxSets; s++) {
           const sObj = match.sets[s] || { scoreA: '', scoreB: '' };
           const sWinner = getSetWinner(s);
-          const isS3 = (state.matchFormat === 'best2of3' && s === 2);
+          const isS3 = (activePool.matchFormat === 'best2of3' && s === 2);
           const isDisabled = isS3 && set3Disabled;
 
           const valA = isDisabled ? '' : (sObj.scoreA ?? '');
@@ -701,6 +847,7 @@
             </td>
           `;
         }
+
         card.innerHTML = `
           <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
             <div class="flex items-center gap-2">
@@ -763,7 +910,7 @@
         container.appendChild(card);
       });
 
-      const totalMatches = state.matches.length;
+      const totalMatches = activePool.matches.length;
       const progressBadge = document.getElementById('matchProgressBadge');
       progressBadge.textContent = `${completedMatchesCount} / ${totalMatches} Matches Complete`;
       if (completedMatchesCount === totalMatches && totalMatches > 0) {
@@ -779,14 +926,14 @@
           const teamSide = e.target.getAttribute('data-team');
           const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10));
 
-          if (!state.matches[mIdx].sets[sIdx]) {
-            state.matches[mIdx].sets[sIdx] = { scoreA: '', scoreB: '' };
+          if (!activePool.matches[mIdx].sets[sIdx]) {
+            activePool.matches[mIdx].sets[sIdx] = { scoreA: '', scoreB: '' };
           }
 
           if (teamSide === 'A') {
-            state.matches[mIdx].sets[sIdx].scoreA = val;
+            activePool.matches[mIdx].sets[sIdx].scoreA = val;
           } else {
-            state.matches[mIdx].sets[sIdx].scoreB = val;
+            activePool.matches[mIdx].sets[sIdx].scoreB = val;
           }
 
           updateDecidingSetState(mIdx);
@@ -799,9 +946,11 @@
         });
       });
     }
+
     function updateDecidingSetState(mIdx) {
-      if (state.matchFormat !== 'best2of3') return;
-      const match = state.matches[mIdx];
+      const activePool = getActivePool();
+      if (activePool.matchFormat !== 'best2of3') return;
+      const match = activePool.matches[mIdx];
       const s1 = match.sets[0];
       const s2 = match.sets[1];
       const s1Done = isSetComplete(s1?.scoreA, s1?.scoreB, 25);
@@ -841,8 +990,9 @@
     }
 
     function computeSingleMatchResult(match) {
-      const maxSets = state.matchFormat === '2sets' ? 2 : (state.matchFormat === 'best3of5' ? 5 : 3);
-      const winTargetSets = state.matchFormat === 'best3of5' ? 3 : 2;
+      const activePool = getActivePool();
+      const maxSets = activePool.matchFormat === '2sets' ? 2 : (activePool.matchFormat === 'best3of5' ? 5 : 3);
+      const winTargetSets = activePool.matchFormat === 'best3of5' ? 3 : 2;
       
       let setsA = 0;
       let setsB = 0;
@@ -854,7 +1004,7 @@
       for (let i = 0; i < maxSets; i++) {
         const s = match.sets[i];
         if (!s) continue;
-        const target = (state.matchFormat === 'best2of3' && i === 2) || (state.matchFormat === 'best3of5' && i === 4) ? 15 : 25;
+        const target = (activePool.matchFormat === 'best2of3' && i === 2) || (activePool.matchFormat === 'best3of5' && i === 4) ? 15 : 25;
         
         if (s.scoreA !== '' || s.scoreB !== '') {
           hasPartialScores = true;
@@ -874,7 +1024,7 @@
       let isComplete = false;
       let winner = null;
 
-      if (state.matchFormat === '2sets') {
+      if (activePool.matchFormat === '2sets') {
         if (completedSets === 2) {
           isComplete = true;
           if (setsA > setsB) winner = 'A';
@@ -902,8 +1052,10 @@
         completedSets
       };
     }
+
     function calculatePoolStats() {
-      const activeTeams = state.teams.slice(0, state.poolSize);
+      const activePool = getActivePool();
+      const activeTeams = activePool.teams.slice(0, activePool.poolSize);
       const stats = {};
 
       activeTeams.forEach(team => {
@@ -925,12 +1077,12 @@
         };
       });
 
-      state.matches.forEach(match => {
+      activePool.matches.forEach(match => {
         const teamA = stats[match.teamAId];
         const teamB = stats[match.teamBId];
         if (!teamA || !teamB) return;
 
-        const maxSets = state.matchFormat === '2sets' ? 2 : (state.matchFormat === 'best3of5' ? 5 : 3);
+        const maxSets = activePool.matchFormat === '2sets' ? 2 : (activePool.matchFormat === 'best3of5' ? 5 : 3);
 
         let mSetsA = 0;
         let mSetsB = 0;
@@ -940,7 +1092,7 @@
         for (let i = 0; i < maxSets; i++) {
           const s = match.sets[i];
           if (!s) continue;
-          const target = (state.matchFormat === 'best2of3' && i === 2) || (state.matchFormat === 'best3of5' && i === 4) ? 15 : 25;
+          const target = (activePool.matchFormat === 'best2of3' && i === 2) || (activePool.matchFormat === 'best3of5' && i === 4) ? 15 : 25;
           if (isSetComplete(s.scoreA, s.scoreB, target)) {
             const a = Number(s.scoreA);
             const b = Number(s.scoreB);
@@ -991,8 +1143,10 @@
 
       return stats;
     }
+
     function resolvePoolRanks(stats) {
-      const activeTeams = state.teams.slice(0, state.poolSize);
+      const activePool = getActivePool();
+      const activeTeams = activePool.teams.slice(0, activePool.poolSize);
       const auditLog = [];
 
       let groups = [activeTeams.map(t => stats[t.id])];
@@ -1066,7 +1220,7 @@
               const winner = tA.team.seed < tB.team.seed ? tA : tB;
               const loser = winner === tA ? tB : tA;
               auditLog.push({
-                step: 'Seed / Coin Flip',
+                step: 'Seed Priority',
                 description: `All statistical metrics equal. Resolved by tournament seed: Seed #${winner.team.seed} over Seed #${loser.team.seed}.`
               });
               finalRanked.push(winner, loser);
@@ -1111,7 +1265,8 @@
     }
 
     function getHeadToHead(teamAId, teamBId) {
-      const match = state.matches.find(m => 
+      const activePool = getActivePool();
+      const match = activePool.matches.find(m => 
         (m.teamAId === teamAId && m.teamBId === teamBId) ||
         (m.teamAId === teamBId && m.teamBId === teamAId)
       );
@@ -1134,7 +1289,9 @@
 
       return { winner, setsA, setsB, pointsA, pointsB, isComplete: res.isComplete };
     }
+
     function resolveMultiTeamTie(tiedTeams, auditLog) {
+      const activePool = getActivePool();
       const tiedTeamIds = new Set(tiedTeams.map(t => t.team.id));
 
       const miniStats = {};
@@ -1148,13 +1305,13 @@
         };
       });
 
-      state.matches.forEach(m => {
+      activePool.matches.forEach(m => {
         if (tiedTeamIds.has(m.teamAId) && tiedTeamIds.has(m.teamBId)) {
-          const maxSets = state.matchFormat === '2sets' ? 2 : (state.matchFormat === 'best3of5' ? 5 : 3);
+          const maxSets = activePool.matchFormat === '2sets' ? 2 : (activePool.matchFormat === 'best3of5' ? 5 : 3);
           for (let s = 0; s < maxSets; s++) {
             const setObj = m.sets[s];
             if (!setObj) continue;
-            const target = (state.matchFormat === 'best2of3' && s === 2) || (state.matchFormat === 'best3of5' && s === 4) ? 15 : 25;
+            const target = (activePool.matchFormat === 'best2of3' && s === 2) || (activePool.matchFormat === 'best3of5' && s === 4) ? 15 : 25;
             if (isSetComplete(setObj.scoreA, setObj.scoreB, target)) {
               const a = Number(setObj.scoreA);
               const b = Number(setObj.scoreB);
@@ -1272,7 +1429,9 @@
       });
       return tiedTeams.sort((a, b) => a.team.seed - b.team.seed);
     }
+
     function calculateAndRenderStandings() {
+      const activePool = getActivePool();
       const stats = calculatePoolStats();
       const { rankedList, auditLog } = resolvePoolRanks(stats);
 
@@ -1281,7 +1440,7 @@
 
       rankedList.forEach((stat, index) => {
         const rank = index + 1;
-        const color = TEAM_COLORS[state.teams.indexOf(stat.team)];
+        const color = TEAM_COLORS[activePool.teams.indexOf(stat.team)];
         const isGoldAdvancer = rank <= 2;
 
         let rankBadge = '';
@@ -1345,6 +1504,7 @@
       renderCrossMatrix(stats);
       renderScenarioAnalysis();
     }
+
     function renderAuditLog(auditLog) {
       const container = document.getElementById('tieBreakAuditContainer');
       container.innerHTML = '';
@@ -1374,7 +1534,8 @@
       const table = document.getElementById('crossMatrixTable');
       table.innerHTML = '';
 
-      const activeTeams = state.teams.slice(0, state.poolSize);
+      const activePool = getActivePool();
+      const activeTeams = activePool.teams.slice(0, activePool.poolSize);
 
       let thead = '<thead><tr class="bg-slate-100 text-[11px] text-slate-600 font-bold uppercase">';
       thead += '<th class="p-2 border border-slate-200 text-left">Team</th>';
@@ -1413,20 +1574,22 @@
 
       table.innerHTML = thead + tbody;
     }
+
     function analyzeFinalMatchScenarios() {
-      const activeTeams = state.teams.slice(0, state.poolSize);
-      const incompleteMatches = state.matches.filter(m => !computeSingleMatchResult(m).isComplete);
+      const activePool = getActivePool();
+      const activeTeams = activePool.teams.slice(0, activePool.poolSize);
+      const incompleteMatches = activePool.matches.filter(m => !computeSingleMatchResult(m).isComplete);
 
       if (incompleteMatches.length !== 1) {
         return null;
       }
 
       const finalMatch = incompleteMatches[0];
-      const teamA = state.teams.find(t => t.id === finalMatch.teamAId);
-      const teamB = state.teams.find(t => t.id === finalMatch.teamBId);
+      const teamA = activePool.teams.find(t => t.id === finalMatch.teamAId);
+      const teamB = activePool.teams.find(t => t.id === finalMatch.teamBId);
 
       let possibleOutcomes = [];
-      if (state.matchFormat === '2sets') {
+      if (activePool.matchFormat === '2sets') {
         possibleOutcomes = [
           { label: `${teamA.shortName || teamA.name} wins 2-0`, sets: [{ scoreA: 25, scoreB: 20 }, { scoreA: 25, scoreB: 20 }] },
           { label: `Split 1-1 (${teamA.shortName} 1, ${teamB.shortName} 1)`, sets: [{ scoreA: 25, scoreB: 20 }, { scoreA: 20, scoreB: 25 }] },
@@ -1442,7 +1605,7 @@
       }
 
       const outcomeResults = possibleOutcomes.map(outcome => {
-        const simMatches = state.matches.map(m => {
+        const simMatches = activePool.matches.map(m => {
           if (m.id === finalMatch.id) {
             return {
               ...m,
@@ -1455,11 +1618,11 @@
           };
         });
 
-        const originalMatches = state.matches;
-        state.matches = simMatches;
+        const originalMatches = activePool.matches;
+        activePool.matches = simMatches;
         const simStats = calculatePoolStats();
         const { rankedList } = resolvePoolRanks(simStats);
-        state.matches = originalMatches;
+        activePool.matches = originalMatches;
 
         const teamRanks = {};
         rankedList.forEach((item, idx) => {
@@ -1507,6 +1670,7 @@
         teamRequirements
       };
     }
+
     function renderScenarioAnalysis() {
       const card = document.getElementById('finalMatchScenarioCard');
       const analysis = analyzeFinalMatchScenarios();
@@ -1520,9 +1684,10 @@
       card.classList.remove('hidden');
 
       const { finalMatch, teamA, teamB, outcomeResults, teamRequirements } = analysis;
+      const activePool = getActivePool();
 
       let matrixHeaders = '<th class="p-2.5 text-left text-[11px] font-bold text-slate-600 uppercase bg-slate-100">Possible Result</th>';
-      state.teams.slice(0, state.poolSize).forEach(t => {
+      activePool.teams.slice(0, activePool.poolSize).forEach(t => {
         matrixHeaders += `<th class="p-2.5 text-center text-[11px] font-bold text-slate-700 uppercase bg-slate-100">${escapeHtml(t.shortName || t.name)}</th>`;
       });
       matrixHeaders += '<th class="p-2.5 text-center text-[11px] font-bold text-slate-500 uppercase bg-slate-100">Action</th>';
@@ -1530,7 +1695,7 @@
       let matrixRows = '';
       outcomeResults.forEach((res, idx) => {
         let cells = `<td class="p-2.5 font-bold text-xs text-slate-800 border-b border-slate-100">${escapeHtml(res.outcome.label)}</td>`;
-        state.teams.slice(0, state.poolSize).forEach(t => {
+        activePool.teams.slice(0, activePool.poolSize).forEach(t => {
           const r = res.teamRanks[t.id];
           let badge = '';
           if (r === 1) badge = '<span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-400 text-slate-900 font-extrabold text-xs shadow-xs">1st</span>';
@@ -1552,7 +1717,7 @@
 
       let teamReqsHtml = '';
       teamRequirements.forEach(tr => {
-        const color = TEAM_COLORS[state.teams.indexOf(tr.team)];
+        const color = TEAM_COLORS[activePool.teams.indexOf(tr.team)];
         teamReqsHtml += `
           <div class="p-3 bg-white border border-slate-200 rounded-xl shadow-xs space-y-1.5">
             <div class="flex items-center gap-2 mb-1">
@@ -1621,22 +1786,83 @@
       triggerAutoSave();
       showToast(`Applied: ${simOutcome.label}`);
     };
-    function loadPreset(scenario) {
-      if (scenario === 'reset-defaults') {
-        if (state.poolSize === 3) {
-          state.teams = JSON.parse(JSON.stringify(DEFAULT_TEAMS_3));
-        } else {
-          state.teams = JSON.parse(JSON.stringify(DEFAULT_TEAMS_4));
+
+    function parseAndApplyAESJson(jsonText) {
+      const activePool = getActivePool();
+      try {
+        let data = JSON.parse(jsonText.trim());
+        if (!Array.isArray(data)) {
+          data = [data];
         }
-        initializeMatches();
+
+        let appliedCount = 0;
+        data.forEach(item => {
+          // Team extraction helper
+          function extractSeed(txt) {
+            if (!txt) return null;
+            const match = txt.match(/\((\d+)\)$/);
+            return match ? parseInt(match[1], 10) : null;
+          }
+
+          if (item.TeamText || item.TeamName) {
+            const teamSeed = extractSeed(item.TeamText) || item.TeamSeed || 1;
+            const teamName = item.TeamText || item.TeamName;
+            
+            // Assign to team 1 if empty or matching
+            if (activePool.teams[0]) {
+              activePool.teams[0].name = teamName;
+              activePool.teams[0].seed = teamSeed;
+              activePool.teams[0].shortName = item.TeamName || teamName;
+              appliedCount++;
+            }
+          }
+
+          if (item.OpponentTeamText || item.OpponentTeamName) {
+            const oppSeed = extractSeed(item.OpponentTeamText) || item.OpponentSeed || 2;
+            const oppName = item.OpponentTeamText || item.OpponentTeamName;
+            
+            // Assign to team 2
+            if (activePool.teams[1]) {
+              activePool.teams[1].name = oppName;
+              activePool.teams[1].seed = oppSeed;
+              activePool.teams[1].shortName = item.OpponentTeamName || oppName;
+              appliedCount++;
+            }
+          }
+        });
+
+        if (appliedCount > 0) {
+          renderAll();
+          triggerAutoSave();
+          showToast(`Successfully imported ${appliedCount} team(s) from AES JSON!`);
+          return true;
+        } else {
+          showToast('No recognizable team names found in JSON.');
+          return false;
+        }
+      } catch (err) {
+        showToast('Invalid JSON format. Please verify and try again.');
+        return false;
+      }
+    }
+
+    function loadPreset(scenario) {
+      const activePool = getActivePool();
+
+      if (scenario === 'reset-defaults') {
+        const preset = POOL_PRESETS[state.activePoolId];
+        activePool.teams = JSON.parse(JSON.stringify(preset.teams));
+        activePool.poolSize = preset.defaultPoolSize;
+        initializeMatchesForPool(state.activePoolId);
+        syncUIWithActivePool();
         renderAll();
         triggerAutoSave();
-        showToast(`Reset to default ${state.poolSize}-team tournament roster!`);
+        showToast(`Reset to ${preset.name} official roster!`);
         return;
       }
 
       if (scenario === 'empty') {
-        state.matches.forEach(m => {
+        activePool.matches.forEach(m => {
           m.sets = [{ scoreA: '', scoreB: '' }, { scoreA: '', scoreB: '' }, { scoreA: '', scoreB: '' }];
         });
         showToast('All scores cleared');
@@ -1645,69 +1871,69 @@
         return;
       }
 
-      if (state.poolSize === 4) {
+      if (activePool.poolSize === 4) {
         if (scenario === 'one-left') {
-          state.matches[0].sets = [{ scoreA: 25, scoreB: 18 }, { scoreA: 25, scoreB: 20 }, { scoreA: '', scoreB: '' }];
-          state.matches[1].sets = [{ scoreA: 25, scoreB: 15 }, { scoreA: 25, scoreB: 19 }, { scoreA: '', scoreB: '' }];
-          state.matches[2].sets = [{ scoreA: 25, scoreB: 12 }, { scoreA: 25, scoreB: 16 }, { scoreA: '', scoreB: '' }];
-          state.matches[3].sets = [{ scoreA: 25, scoreB: 22 }, { scoreA: 25, scoreB: 23 }, { scoreA: '', scoreB: '' }];
-          state.matches[4].sets = [{ scoreA: 25, scoreB: 19 }, { scoreA: 25, scoreB: 21 }, { scoreA: '', scoreB: '' }];
-          state.matches[5].sets = [{ scoreA: '', scoreB: '' }, { scoreA: '', scoreB: '' }, { scoreA: '', scoreB: '' }];
+          activePool.matches[0].sets = [{ scoreA: 25, scoreB: 18 }, { scoreA: 25, scoreB: 20 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[1].sets = [{ scoreA: 25, scoreB: 15 }, { scoreA: 25, scoreB: 19 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[2].sets = [{ scoreA: 25, scoreB: 12 }, { scoreA: 25, scoreB: 16 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[3].sets = [{ scoreA: 25, scoreB: 22 }, { scoreA: 25, scoreB: 23 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[4].sets = [{ scoreA: 25, scoreB: 19 }, { scoreA: 25, scoreB: 21 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[5].sets = [{ scoreA: '', scoreB: '' }, { scoreA: '', scoreB: '' }, { scoreA: '', scoreB: '' }];
           showToast('Loaded scenario with only Match #6 remaining!');
         } else if (scenario === 'clear') {
-          state.matches[0].sets = [{ scoreA: 25, scoreB: 18 }, { scoreA: 25, scoreB: 20 }, { scoreA: '', scoreB: '' }];
-          state.matches[1].sets = [{ scoreA: 20, scoreB: 25 }, { scoreA: 23, scoreB: 25 }, { scoreA: '', scoreB: '' }];
-          state.matches[2].sets = [{ scoreA: 25, scoreB: 16 }, { scoreA: 25, scoreB: 14 }, { scoreA: '', scoreB: '' }];
-          state.matches[3].sets = [{ scoreA: 25, scoreB: 21 }, { scoreA: 25, scoreB: 20 }, { scoreA: '', scoreB: '' }];
-          state.matches[4].sets = [{ scoreA: 25, scoreB: 22 }, { scoreA: 25, scoreB: 20 }, { scoreA: '', scoreB: '' }];
-          state.matches[5].sets = [{ scoreA: 25, scoreB: 19 }, { scoreA: 25, scoreB: 21 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[0].sets = [{ scoreA: 25, scoreB: 18 }, { scoreA: 25, scoreB: 20 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[1].sets = [{ scoreA: 20, scoreB: 25 }, { scoreA: 23, scoreB: 25 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[2].sets = [{ scoreA: 25, scoreB: 16 }, { scoreA: 25, scoreB: 14 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[3].sets = [{ scoreA: 25, scoreB: 21 }, { scoreA: 25, scoreB: 20 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[4].sets = [{ scoreA: 25, scoreB: 22 }, { scoreA: 25, scoreB: 20 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[5].sets = [{ scoreA: 25, scoreB: 19 }, { scoreA: 25, scoreB: 21 }, { scoreA: '', scoreB: '' }];
           showToast('Loaded clear 1st to 4th results');
         } else if (scenario === '2way') {
-          state.matches[0].sets = [{ scoreA: 25, scoreB: 18 }, { scoreA: 25, scoreB: 20 }, { scoreA: '', scoreB: '' }];
-          state.matches[1].sets = [{ scoreA: 25, scoreB: 16 }, { scoreA: 25, scoreB: 17 }, { scoreA: '', scoreB: '' }];
-          state.matches[2].sets = [{ scoreA: 25, scoreB: 14 }, { scoreA: 25, scoreB: 16 }, { scoreA: '', scoreB: '' }];
-          state.matches[3].sets = [{ scoreA: 25, scoreB: 20 }, { scoreA: 25, scoreB: 22 }, { scoreA: '', scoreB: '' }];
-          state.matches[4].sets = [{ scoreA: 22, scoreB: 25 }, { scoreA: 23, scoreB: 25 }, { scoreA: '', scoreB: '' }];
-          state.matches[5].sets = [{ scoreA: 25, scoreB: 19 }, { scoreA: 25, scoreB: 21 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[0].sets = [{ scoreA: 25, scoreB: 18 }, { scoreA: 25, scoreB: 20 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[1].sets = [{ scoreA: 25, scoreB: 16 }, { scoreA: 25, scoreB: 17 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[2].sets = [{ scoreA: 25, scoreB: 14 }, { scoreA: 25, scoreB: 16 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[3].sets = [{ scoreA: 25, scoreB: 20 }, { scoreA: 25, scoreB: 22 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[4].sets = [{ scoreA: 22, scoreB: 25 }, { scoreA: 23, scoreB: 25 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[5].sets = [{ scoreA: 25, scoreB: 19 }, { scoreA: 25, scoreB: 21 }, { scoreA: '', scoreB: '' }];
           showToast('Loaded 2-way tie resolved by Head-to-Head');
         } else if (scenario === '3way-set') {
-          state.matches[0].sets = [{ scoreA: 20, scoreB: 25 }, { scoreA: 20, scoreB: 25 }, { scoreA: '', scoreB: '' }];
-          state.matches[1].sets = [{ scoreA: 25, scoreB: 14 }, { scoreA: 25, scoreB: 18 }, { scoreA: '', scoreB: '' }];
-          state.matches[2].sets = [{ scoreA: 25, scoreB: 15 }, { scoreA: 25, scoreB: 17 }, { scoreA: '', scoreB: '' }];
-          state.matches[3].sets = [{ scoreA: 25, scoreB: 20 }, { scoreA: 20, scoreB: 25 }, { scoreA: 15, scoreB: 10 }];
-          state.matches[4].sets = [{ scoreA: 25, scoreB: 16 }, { scoreA: 25, scoreB: 19 }, { scoreA: '', scoreB: '' }];
-          state.matches[5].sets = [{ scoreA: 25, scoreB: 20 }, { scoreA: 25, scoreB: 20 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[0].sets = [{ scoreA: 20, scoreB: 25 }, { scoreA: 20, scoreB: 25 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[1].sets = [{ scoreA: 25, scoreB: 14 }, { scoreA: 25, scoreB: 18 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[2].sets = [{ scoreA: 25, scoreB: 15 }, { scoreA: 25, scoreB: 17 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[3].sets = [{ scoreA: 25, scoreB: 20 }, { scoreA: 20, scoreB: 25 }, { scoreA: 15, scoreB: 10 }];
+          activePool.matches[4].sets = [{ scoreA: 25, scoreB: 16 }, { scoreA: 25, scoreB: 19 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[5].sets = [{ scoreA: 25, scoreB: 20 }, { scoreA: 25, scoreB: 20 }, { scoreA: '', scoreB: '' }];
           showToast('Loaded 3-way tie broken by Set %');
         } else if (scenario === '3way-points') {
-          state.matches[0].sets = [{ scoreA: 23, scoreB: 25 }, { scoreA: 23, scoreB: 25 }, { scoreA: '', scoreB: '' }];
-          state.matches[1].sets = [{ scoreA: 25, scoreB: 12 }, { scoreA: 25, scoreB: 15 }, { scoreA: '', scoreB: '' }];
-          state.matches[2].sets = [{ scoreA: 25, scoreB: 14 }, { scoreA: 25, scoreB: 13 }, { scoreA: '', scoreB: '' }];
-          state.matches[3].sets = [{ scoreA: 25, scoreB: 20 }, { scoreA: 25, scoreB: 22 }, { scoreA: '', scoreB: '' }];
-          state.matches[4].sets = [{ scoreA: 25, scoreB: 15 }, { scoreA: 25, scoreB: 16 }, { scoreA: '', scoreB: '' }];
-          state.matches[5].sets = [{ scoreA: 25, scoreB: 18 }, { scoreA: 25, scoreB: 22 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[0].sets = [{ scoreA: 23, scoreB: 25 }, { scoreA: 23, scoreB: 25 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[1].sets = [{ scoreA: 25, scoreB: 12 }, { scoreA: 25, scoreB: 15 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[2].sets = [{ scoreA: 25, scoreB: 14 }, { scoreA: 25, scoreB: 13 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[3].sets = [{ scoreA: 25, scoreB: 20 }, { scoreA: 25, scoreB: 22 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[4].sets = [{ scoreA: 25, scoreB: 15 }, { scoreA: 25, scoreB: 16 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[5].sets = [{ scoreA: 25, scoreB: 18 }, { scoreA: 25, scoreB: 22 }, { scoreA: '', scoreB: '' }];
           showToast('Loaded 3-way tie broken by USAV Point %');
         }
       } else {
         // 3-team pool presets
         if (scenario === 'one-left') {
-          state.matches[0].sets = [{ scoreA: 25, scoreB: 19 }, { scoreA: 25, scoreB: 21 }, { scoreA: '', scoreB: '' }];
-          state.matches[1].sets = [{ scoreA: 25, scoreB: 20 }, { scoreA: 25, scoreB: 22 }, { scoreA: '', scoreB: '' }];
-          state.matches[2].sets = [{ scoreA: '', scoreB: '' }, { scoreA: '', scoreB: '' }, { scoreA: '', scoreB: '' }];
+          activePool.matches[0].sets = [{ scoreA: 25, scoreB: 19 }, { scoreA: 25, scoreB: 21 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[1].sets = [{ scoreA: 25, scoreB: 20 }, { scoreA: 25, scoreB: 22 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[2].sets = [{ scoreA: '', scoreB: '' }, { scoreA: '', scoreB: '' }, { scoreA: '', scoreB: '' }];
           showToast('Loaded 3-team scenario with Match #3 remaining!');
         } else if (scenario === 'clear') {
-          state.matches[0].sets = [{ scoreA: 25, scoreB: 18 }, { scoreA: 25, scoreB: 19 }, { scoreA: '', scoreB: '' }];
-          state.matches[1].sets = [{ scoreA: 25, scoreB: 20 }, { scoreA: 25, scoreB: 22 }, { scoreA: '', scoreB: '' }];
-          state.matches[2].sets = [{ scoreA: 25, scoreB: 21 }, { scoreA: 25, scoreB: 19 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[0].sets = [{ scoreA: 25, scoreB: 18 }, { scoreA: 25, scoreB: 19 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[1].sets = [{ scoreA: 25, scoreB: 20 }, { scoreA: 25, scoreB: 22 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[2].sets = [{ scoreA: 25, scoreB: 21 }, { scoreA: 25, scoreB: 19 }, { scoreA: '', scoreB: '' }];
           showToast('Loaded 3-team clear result');
         } else if (scenario === '2way') {
-          state.matches[0].sets = [{ scoreA: 25, scoreB: 18 }, { scoreA: 25, scoreB: 20 }, { scoreA: '', scoreB: '' }];
-          state.matches[1].sets = [{ scoreA: 21, scoreB: 25 }, { scoreA: 19, scoreB: 25 }, { scoreA: '', scoreB: '' }];
-          state.matches[2].sets = [{ scoreA: 25, scoreB: 21 }, { scoreA: 25, scoreB: 22 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[0].sets = [{ scoreA: 25, scoreB: 18 }, { scoreA: 25, scoreB: 20 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[1].sets = [{ scoreA: 21, scoreB: 25 }, { scoreA: 19, scoreB: 25 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[2].sets = [{ scoreA: 25, scoreB: 21 }, { scoreA: 25, scoreB: 22 }, { scoreA: '', scoreB: '' }];
           showToast('Loaded 2-way tie resolved by H2H');
         } else if (scenario === '3way-points' || scenario === '3way-set') {
-          state.matches[0].sets = [{ scoreA: 25, scoreB: 20 }, { scoreA: 25, scoreB: 21 }, { scoreA: '', scoreB: '' }];
-          state.matches[1].sets = [{ scoreA: 20, scoreB: 25 }, { scoreA: 21, scoreB: 25 }, { scoreA: '', scoreB: '' }];
-          state.matches[2].sets = [{ scoreA: 21, scoreB: 25 }, { scoreA: 22, scoreB: 25 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[0].sets = [{ scoreA: 25, scoreB: 20 }, { scoreA: 25, scoreB: 21 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[1].sets = [{ scoreA: 20, scoreB: 25 }, { scoreA: 21, scoreB: 25 }, { scoreA: '', scoreB: '' }];
+          activePool.matches[2].sets = [{ scoreA: 21, scoreB: 25 }, { scoreA: 22, scoreB: 25 }, { scoreA: '', scoreB: '' }];
           showToast('Loaded 3-way circular tie in 3-team pool');
         }
       }
@@ -1715,6 +1941,7 @@
       renderAll();
       triggerAutoSave();
     }
+
     function escapeHtml(text) {
       if (!text) return '';
       return String(text)
@@ -1736,10 +1963,11 @@
     }
 
     function copyStandingsToClipboard() {
+      const activePool = getActivePool();
       const stats = calculatePoolStats();
       const { rankedList } = resolvePoolRanks(stats);
 
-      let text = `=== AES VOLLEYBALL POOL STANDINGS (${state.poolSize}-Team Pool) ===\n`;
+      let text = `=== AES VOLLEYBALL POOL STANDINGS (${activePool.poolSize}-Team Pool) ===\n`;
       text += `Rank | Team | Match W-L (Pct) | Sets W-L (Pct) | Points PF-PA (Pct)\n`;
       text += `------------------------------------------------------------------\n`;
       
@@ -1765,26 +1993,15 @@
     }
 
     function setPoolSize(size) {
-      if (state.poolSize === size) return;
-      state.poolSize = size;
+      const activePool = getActivePool();
+      if (activePool.poolSize === size) return;
+      activePool.poolSize = size;
       
-      const btn3 = document.getElementById('btnPool3');
-      const btn4 = document.getElementById('btnPool4');
-      
-      if (size === 3) {
-        btn3.className = 'px-3 py-1.5 text-xs font-semibold rounded-md transition-all bg-white text-indigo-600 shadow-sm font-bold';
-        btn4.className = 'px-3 py-1.5 text-xs font-semibold rounded-md transition-all text-slate-600 hover:text-slate-900';
-        state.teams = JSON.parse(JSON.stringify(DEFAULT_TEAMS_3));
-      } else {
-        btn4.className = 'px-3 py-1.5 text-xs font-semibold rounded-md transition-all bg-white text-indigo-600 shadow-sm font-bold';
-        btn3.className = 'px-3 py-1.5 text-xs font-semibold rounded-md transition-all text-slate-600 hover:text-slate-900';
-        state.teams = JSON.parse(JSON.stringify(DEFAULT_TEAMS_4));
-      }
-
-      initializeMatches();
+      initializeMatchesForPool(state.activePoolId);
+      syncUIWithActivePool();
       renderAll();
       triggerAutoSave();
-      showToast(`Switched to ${size}-Team Pool with tournament seeds`);
+      showToast(`Switched to ${size}-Team Pool`);
     }
 
     function renderAll(reRenderMatches = true) {
@@ -1794,10 +2011,19 @@
       }
       calculateAndRenderStandings();
     }
+
     window.addEventListener('DOMContentLoaded', async () => {
-      initializeMatches();
+      // Initialize matches for both pools
+      initializeMatchesForPool('pool-18b');
+      initializeMatchesForPool('pool-14b');
+
+      syncUIWithActivePool();
       renderAll();
       setupPWA();
+
+      // Pool tab buttons
+      document.getElementById('tabPool18').addEventListener('click', () => switchActivePool('pool-18b'));
+      document.getElementById('tabPool14').addEventListener('click', () => switchActivePool('pool-14b'));
 
       // Pool Size Switchers
       document.getElementById('btnPool3').addEventListener('click', () => setPoolSize(3));
@@ -1805,7 +2031,7 @@
 
       // Match Format Selector
       document.getElementById('matchFormat').addEventListener('change', (e) => {
-        state.matchFormat = e.target.value;
+        getActivePool().matchFormat = e.target.value;
         renderMatches();
         calculateAndRenderStandings();
         triggerAutoSave();
@@ -1827,6 +2053,36 @@
 
       // Copy Standings Button
       document.getElementById('btnCopyStandings').addEventListener('click', copyStandingsToClipboard);
+
+      // AES JSON Import Modal controls
+      const importModal = document.getElementById('importModal');
+      const importInput = document.getElementById('importJsonInput');
+
+      document.getElementById('btnOpenImportModal').addEventListener('click', () => {
+        importModal.classList.remove('hidden');
+        importInput.value = '';
+        importInput.focus();
+      });
+
+      document.getElementById('btnCloseImportModal').addEventListener('click', () => {
+        importModal.classList.add('hidden');
+      });
+
+      document.getElementById('btnCancelImport').addEventListener('click', () => {
+        importModal.classList.add('hidden');
+      });
+
+      document.getElementById('btnExecuteImport').addEventListener('click', () => {
+        const text = importInput.value;
+        if (!text.trim()) {
+          showToast('Please paste valid AES JSON.');
+          return;
+        }
+        const success = parseAndApplyAESJson(text);
+        if (success) {
+          importModal.classList.add('hidden');
+        }
+      });
 
       // Initialize session persistence layer
       await initCloudSync();
