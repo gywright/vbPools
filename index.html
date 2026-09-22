@@ -133,7 +133,7 @@
             <button id="tabPool18" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-white text-indigo-700 shadow-sm">
               <span class="w-2.5 h-2.5 rounded-full bg-[#7F5FFF]"></span>
               <span>18 Boys: Bay to Bay 16-Premier</span>
-              <span class="text-[10px] bg-indigo-100 text-indigo-800 px-1.5 py-0.2 rounded font-mono">3 Teams</span>
+              <span class="text-[10px] bg-indigo-100 text-indigo-800 px-1.5 py-0.2 rounded font-mono">4 Teams</span>
             </button>
             <button id="tabPool14" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-600 hover:text-slate-900">
               <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
@@ -351,13 +351,13 @@
         division: '18 Boys',
         divisionColor: '#7F5FFF',
         teamCount: 111,
-        defaultPoolSize: 3,
+        defaultPoolSize: 4,
         name: '18 Boys: Bay to Bay 16-Premier',
         teams: [
           { id: 'T1', seed: 66, poolSeed: 1, name: 'Bay to Bay 16-Premier (66)', shortName: 'B2B 16-Prem (66)' },
-          { id: 'T2', seed: 70, poolSeed: 2, name: 'Slainte 18-Cobalt (70)', shortName: 'Slainte 18-Cobalt (70)' },
-          { id: 'T3', seed: 83, poolSeed: 3, name: 'Golden State 18 Gold (83)', shortName: 'Golden State 18G (83)' },
-          { id: 'T4', seed: 88, poolSeed: 4, name: 'FPVC 17-1 (88)', shortName: 'FPVC 17-1 (88)' }
+          { id: 'T2', seed: 67, poolSeed: 2, name: 'NorCal Boys 17-2 (67)', shortName: 'NorCal 17-2 (67)' },
+          { id: 'T3', seed: 70, poolSeed: 3, name: 'Slainte 18-Cobalt (70)', shortName: 'Slainte 18-Cobalt (70)' },
+          { id: 'T4', seed: 71, poolSeed: 4, name: 'Kinnect 17-Forest (71)', shortName: 'Kinnect 17-Forest (71)' }
         ]
       },
       'pool-14b': {
@@ -381,7 +381,7 @@
       activePoolId: 'pool-18b', // 'pool-18b' or 'pool-14b'
       poolData: {
         'pool-18b': {
-          poolSize: 3,
+          poolSize: 4,
           matchFormat: 'best2of3',
           teams: JSON.parse(JSON.stringify(POOL_PRESETS['pool-18b'].teams)),
           matches: []
@@ -1790,54 +1790,73 @@
     function parseAndApplyAESJson(jsonText) {
       const activePool = getActivePool();
       try {
-        let data = JSON.parse(jsonText.trim());
-        if (!Array.isArray(data)) {
-          data = [data];
+        let raw = JSON.parse(jsonText.trim());
+        let data = Array.isArray(raw) ? raw : [raw];
+
+        // Seed extraction helper
+        function extractSeed(txt) {
+          if (!txt) return null;
+          const match = txt.match(/\((\d+)\)$/);
+          return match ? parseInt(match[1], 10) : null;
         }
 
-        let appliedCount = 0;
+        const teamMap = new Map();
+
         data.forEach(item => {
-          // Team extraction helper
-          function extractSeed(txt) {
-            if (!txt) return null;
-            const match = txt.match(/\((\d+)\)$/);
-            return match ? parseInt(match[1], 10) : null;
+          // Case 1: AES Play / Matches schedule structure
+          if (item.Matches && Array.isArray(item.Matches)) {
+            item.Matches.forEach(m => {
+              if (m.FirstTeamText || m.FirstTeamName) {
+                const name = m.FirstTeamText || m.FirstTeamName;
+                const seed = extractSeed(m.FirstTeamText) || 1;
+                teamMap.set(name, seed);
+              }
+              if (m.SecondTeamText || m.SecondTeamName) {
+                const name = m.SecondTeamText || m.SecondTeamName;
+                const seed = extractSeed(m.SecondTeamText) || 2;
+                teamMap.set(name, seed);
+              }
+              if (m.WorkTeamText) {
+                const name = m.WorkTeamText;
+                const seed = extractSeed(m.WorkTeamText) || 3;
+                teamMap.set(name, seed);
+              }
+            });
           }
 
+          // Case 2: AES Team / Opponent single match structure
           if (item.TeamText || item.TeamName) {
-            const teamSeed = extractSeed(item.TeamText) || item.TeamSeed || 1;
-            const teamName = item.TeamText || item.TeamName;
-            
-            // Assign to team 1 if empty or matching
-            if (activePool.teams[0]) {
-              activePool.teams[0].name = teamName;
-              activePool.teams[0].seed = teamSeed;
-              activePool.teams[0].shortName = item.TeamName || teamName;
-              appliedCount++;
-            }
+            const name = item.TeamText || item.TeamName;
+            teamMap.set(name, extractSeed(item.TeamText) || item.TeamSeed || 1);
           }
-
           if (item.OpponentTeamText || item.OpponentTeamName) {
-            const oppSeed = extractSeed(item.OpponentTeamText) || item.OpponentSeed || 2;
-            const oppName = item.OpponentTeamText || item.OpponentTeamName;
-            
-            // Assign to team 2
-            if (activePool.teams[1]) {
-              activePool.teams[1].name = oppName;
-              activePool.teams[1].seed = oppSeed;
-              activePool.teams[1].shortName = item.OpponentTeamName || oppName;
-              appliedCount++;
-            }
+            const name = item.OpponentTeamText || item.OpponentTeamName;
+            teamMap.set(name, extractSeed(item.OpponentTeamText) || item.OpponentSeed || 2);
           }
         });
 
-        if (appliedCount > 0) {
+        if (teamMap.size >= 2) {
+          // Sort teams by tournament overall seed ascending
+          const sortedTeams = Array.from(teamMap.entries()).map(([name, seed]) => ({ name, seed }));
+          sortedTeams.sort((a, b) => a.seed - b.seed);
+
+          const countToApply = Math.min(sortedTeams.length, activePool.poolSize);
+          for (let i = 0; i < countToApply; i++) {
+            if (activePool.teams[i]) {
+              activePool.teams[i].name = sortedTeams[i].name;
+              activePool.teams[i].seed = sortedTeams[i].seed;
+              activePool.teams[i].shortName = sortedTeams[i].name.length > 20
+                ? sortedTeams[i].name.substring(0, 18) + '...'
+                : sortedTeams[i].name;
+            }
+          }
+
           renderAll();
           triggerAutoSave();
-          showToast(`Successfully imported ${appliedCount} team(s) from AES JSON!`);
+          showToast(`Successfully imported ${countToApply} pool teams from AES!`);
           return true;
         } else {
-          showToast('No recognizable team names found in JSON.');
+          showToast('Could not find at least 2 distinct teams in the JSON.');
           return false;
         }
       } catch (err) {
