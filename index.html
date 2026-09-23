@@ -1841,54 +1841,87 @@
       const activePool = getActivePool();
       try {
         let raw = JSON.parse(jsonText.trim());
-        let data = Array.isArray(raw) ? raw : [raw];
+        let rootData = Array.isArray(raw) ? raw : [raw];
 
         // Seed extraction helper
         function extractSeed(txt) {
           if (!txt) return null;
-          const match = txt.match(/\((\d+)\)$/);
+          const match = String(txt).match(/\((\d+)\)$/);
           return match ? parseInt(match[1], 10) : null;
         }
 
-        const teamMap = new Map();
+        // Clean team name for fuzzy matching
+        function cleanName(str) {
+          if (!str) return '';
+          return String(str).toLowerCase().replace(/\s*\(nc\)\s*/gi, '').replace(/\s*\(\d+\)\s*$/g, '').trim();
+        }
 
-        data.forEach(item => {
-          // Case 1: AES Play / Matches schedule structure
-          if (item.Matches && Array.isArray(item.Matches)) {
-            item.Matches.forEach(m => {
+        const teamMap = new Map();
+        const extractedMatches = [];
+
+        // Traverse root objects for Play / Matches or standalone matches
+        rootData.forEach(item => {
+          if (!item) return;
+
+          // Case 1: Play wrapper containing Matches array
+          const matchesList = item.Matches || (item.Play && item.Play.Matches) || null;
+          if (matchesList && Array.isArray(matchesList)) {
+            matchesList.forEach(m => {
+              extractedMatches.push(m);
               if (m.FirstTeamText || m.FirstTeamName) {
                 const name = m.FirstTeamText || m.FirstTeamName;
-                const seed = extractSeed(m.FirstTeamText) || 1;
-                teamMap.set(name, seed);
+                const seed = extractSeed(m.FirstTeamText) || extractSeed(m.FirstTeamName) || 1;
+                teamMap.set(name, { name, seed, id: m.FirstTeamId });
               }
               if (m.SecondTeamText || m.SecondTeamName) {
                 const name = m.SecondTeamText || m.SecondTeamName;
-                const seed = extractSeed(m.SecondTeamText) || 2;
-                teamMap.set(name, seed);
+                const seed = extractSeed(m.SecondTeamText) || extractSeed(m.SecondTeamName) || 2;
+                teamMap.set(name, { name, seed, id: m.SecondTeamId });
               }
-              if (m.WorkTeamText) {
-                const name = m.WorkTeamText;
-                const seed = extractSeed(m.WorkTeamText) || 3;
-                teamMap.set(name, seed);
+              if (m.WorkTeamText || m.WorkTeamName) {
+                const name = m.WorkTeamText || m.WorkTeamName;
+                const seed = extractSeed(m.WorkTeamText) || extractSeed(m.WorkTeamName) || 3;
+                teamMap.set(name, { name, seed, id: m.WorkTeamId });
               }
             });
           }
 
-          // Case 2: AES Team / Opponent single match structure
+          // Case 2: Match-level objects directly at the root
+          if (item.FirstTeamName || item.FirstTeamText) {
+            extractedMatches.push(item);
+            const name1 = item.FirstTeamText || item.FirstTeamName;
+            const seed1 = extractSeed(item.FirstTeamText) || extractSeed(item.FirstTeamName) || 1;
+            teamMap.set(name1, { name: name1, seed: seed1, id: item.FirstTeamId });
+
+            if (item.SecondTeamName || item.SecondTeamText) {
+              const name2 = item.SecondTeamText || item.SecondTeamName;
+              const seed2 = extractSeed(item.SecondTeamText) || extractSeed(item.SecondTeamName) || 2;
+              teamMap.set(name2, { name: name2, seed: seed2, id: item.SecondTeamId });
+            }
+          }
+
+          // Case 3: Team / Opponent single match endpoint
           if (item.TeamText || item.TeamName) {
             const name = item.TeamText || item.TeamName;
-            teamMap.set(name, extractSeed(item.TeamText) || item.TeamSeed || 1);
+            teamMap.set(name, { name, seed: extractSeed(item.TeamText) || item.TeamSeed || 1, id: item.TeamId });
           }
           if (item.OpponentTeamText || item.OpponentTeamName) {
             const name = item.OpponentTeamText || item.OpponentTeamName;
-            teamMap.set(name, extractSeed(item.OpponentTeamText) || item.OpponentSeed || 2);
+            teamMap.set(name, { name, seed: extractSeed(item.OpponentTeamText) || item.OpponentSeed || 2, id: item.OpponentTeamId });
           }
         });
 
+        // Update Pool Teams if teams are found
         if (teamMap.size >= 2) {
-          // Sort teams by tournament overall seed ascending
-          const sortedTeams = Array.from(teamMap.entries()).map(([name, seed]) => ({ name, seed }));
-          sortedTeams.sort((a, b) => a.seed - b.seed);
+          const sortedTeams = Array.from(teamMap.values());
+          sortedTeams.sort((a, b) => (a.seed || 999) - (b.seed || 999));
+
+          // Adjust pool size if 3 vs 4 teams were provided
+          if (sortedTeams.length === 3 && activePool.poolSize !== 3) {
+            setPoolSize(3);
+          } else if (sortedTeams.length >= 4 && activePool.poolSize !== 4) {
+            setPoolSize(4);
+          }
 
           const countToApply = Math.min(sortedTeams.length, activePool.poolSize);
           for (let i = 0; i < countToApply; i++) {
@@ -1898,18 +1931,98 @@
               activePool.teams[i].shortName = sortedTeams[i].name.length > 20
                 ? sortedTeams[i].name.substring(0, 18) + '...'
                 : sortedTeams[i].name;
+              if (sortedTeams[i].id) {
+                activePool.teams[i].aesId = sortedTeams[i].id;
+              }
             }
           }
+        }
 
-          renderAll();
-          triggerAutoSave();
-          showToast(`Successfully imported ${countToApply} pool teams from AES!`);
-          return true;
+        // Helper to match an AES team string/ID to our active pool team
+        function findPoolTeam(aesId, aesName, aesText) {
+          if (aesId) {
+            const byId = activePool.teams.find(t => t.aesId === aesId);
+            if (byId) return byId;
+          }
+          const targetClean = cleanName(aesText || aesName);
+          if (!targetClean) return null;
+
+          // Exact or substring name match
+          return activePool.teams.find(t => {
+            const poolClean = cleanName(t.name);
+            return poolClean === targetClean || poolClean.includes(targetClean) || targetClean.includes(poolClean);
+          }) || null;
+        }
+
+        // Populate Match Scores
+        let scoresPopulatedCount = 0;
+
+        extractedMatches.forEach(m => {
+          const team1 = findPoolTeam(m.FirstTeamId, m.FirstTeamName, m.FirstTeamText);
+          const team2 = findPoolTeam(m.SecondTeamId, m.SecondTeamName, m.SecondTeamText);
+
+          if (!team1 || !team2 || team1.id === team2.id) return;
+
+          // Locate match in current schedule
+          const poolMatch = activePool.matches.find(pm =>
+            (pm.teamAId === team1.id && pm.teamBId === team2.id) ||
+            (pm.teamAId === team2.id && pm.teamBId === team1.id)
+          );
+
+          if (!poolMatch) return;
+
+          const isTeam1SideA = poolMatch.teamAId === team1.id;
+          let matchHasImportedScores = false;
+
+          // Parse sets from m.Sets array
+          if (m.Sets && Array.isArray(m.Sets) && m.Sets.length > 0) {
+            m.Sets.forEach((setObj, sIdx) => {
+              if (sIdx >= poolMatch.sets.length) return;
+
+              let score1 = setObj.FirstTeamScore;
+              let score2 = setObj.SecondTeamScore;
+
+              // Fallback to ScoreText like "25-21"
+              if ((score1 === null || score1 === undefined || score1 === '') && setObj.ScoreText) {
+                const parts = String(setObj.ScoreText).split('-');
+                if (parts.length === 2) {
+                  score1 = parseInt(parts[0], 10);
+                  score2 = parseInt(parts[1], 10);
+                }
+              }
+
+              if (score1 !== null && score1 !== undefined && !isNaN(score1) && score1 !== '') {
+                poolMatch.sets[sIdx].scoreA = isTeam1SideA ? parseInt(score1, 10) : parseInt(score2, 10);
+                poolMatch.sets[sIdx].scoreB = isTeam1SideA ? parseInt(score2, 10) : parseInt(score1, 10);
+                matchHasImportedScores = true;
+              }
+            });
+          }
+
+          if (matchHasImportedScores) {
+            scoresPopulatedCount++;
+            const mIdx = activePool.matches.indexOf(poolMatch);
+            if (mIdx !== -1) {
+              updateDecidingSetState(mIdx);
+            }
+          }
+        });
+
+        renderAll();
+        triggerAutoSave();
+
+        if (scoresPopulatedCount > 0) {
+          showToast(`Imported ${teamMap.size} teams and ${scoresPopulatedCount} match scores!`);
+        } else if (teamMap.size > 0) {
+          showToast(`Imported ${teamMap.size} pool teams (schedule ready for scoring).`);
         } else {
-          showToast('Could not find at least 2 distinct teams in the JSON.');
+          showToast('Could not find pool teams or scores in the provided JSON.');
           return false;
         }
+
+        return true;
       } catch (err) {
+        console.warn('AES Import Error:', err);
         showToast('Invalid JSON format. Please verify and try again.');
         return false;
       }
