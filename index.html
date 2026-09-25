@@ -83,7 +83,7 @@
         </div>
         <div>
           <div class="flex items-center gap-2">
-            <h1 class="text-lg font-extrabold text-slate-900 tracking-tight">AES Pool Rank Calculator <span class="text-xs font-semibold text-indigo-600 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded-md font-mono">v1.0.3</span></h1>
+            <h1 class="text-lg font-extrabold text-slate-900 tracking-tight">AES Pool Rank Calculator <span class="text-xs font-semibold text-indigo-600 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded-md font-mono">v1.0.4</span></h1>
             <span class="bg-indigo-100 text-indigo-700 text-xs font-semibold px-2 py-0.5 rounded-full border border-indigo-200">USAV Rules</span>
             <span id="pwaBadge" class="hidden bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-200 uppercase tracking-wide">PWA Active</span>
           </div>
@@ -116,6 +116,12 @@
         <button id="btnOpenImportModal" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors">
           <svg class="w-3.5 h-3.5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
           Import AES JSON
+        </button>
+
+        <!-- View Captured Raw AES JSON Button -->
+        <button id="btnOpenCapturedJsonModal" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors">
+          <svg class="w-3.5 h-3.5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+          Raw AES JSON
         </button>
 
         <!-- Pool Size Switcher -->
@@ -388,6 +394,49 @@
         </button>
         <button id="btnExecuteImport" class="px-4 py-2 text-xs font-bold text-white bg-slate-800 hover:bg-slate-900 rounded-lg shadow-sm transition-all">
           Apply Pasted JSON
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Captured Live AES JSON Debug Modal -->
+  <div id="capturedJsonModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 flex-shrink-0">
+        <div class="flex items-center gap-2.5">
+          <span class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-base">🔍</span>
+          <div>
+            <h3 class="font-extrabold text-sm text-slate-900">Captured Live AES JSON</h3>
+            <p class="text-xs text-slate-500" id="capturedJsonMeta">Raw response captured from Live AES Sync</p>
+          </div>
+        </div>
+        <button id="btnCloseCapturedJsonModal" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="flex-grow flex flex-col min-h-0 space-y-2">
+        <details class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-700">
+          <summary class="font-bold cursor-pointer text-indigo-700 hover:text-indigo-800">
+            📊 Collapsible Match Inspection Summary
+          </summary>
+          <div id="capturedJsonMatchesSummary" class="mt-2 space-y-1 font-mono text-[11px] max-h-40 overflow-y-auto custom-scrollbar">
+            <span class="text-slate-400">No match data captured yet.</span>
+          </div>
+        </details>
+
+        <div class="flex items-center justify-between pt-1">
+          <label class="text-xs font-semibold text-slate-700">Raw Captured Response Payload:</label>
+          <button id="btnCopyCapturedJson" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
+            📋 Copy JSON
+          </button>
+        </div>
+        <textarea id="capturedJsonArea" readonly rows="12" class="w-full text-[11px] font-mono p-3 bg-slate-900 text-emerald-400 rounded-xl focus:outline-none flex-grow custom-scrollbar" placeholder="No Live AES Sync response captured yet. Perform a Live AES Sync to inspect the payload."></textarea>
+      </div>
+
+      <div class="flex items-center justify-end pt-2 border-t border-slate-100 flex-shrink-0">
+        <button id="btnCloseCapturedJsonModalBottom" class="px-4 py-2 text-xs font-bold text-white bg-slate-800 hover:bg-slate-900 rounded-lg shadow-xs transition-all">
+          Close
         </button>
       </div>
     </div>
@@ -1970,6 +2019,42 @@
       return '';
     }
 
+    let lastCapturedAesJson = null;
+
+    function updateCapturedJsonModal() {
+      const area = document.getElementById('capturedJsonArea');
+      const meta = document.getElementById('capturedJsonMeta');
+      const summary = document.getElementById('capturedJsonMatchesSummary');
+      if (!area || !lastCapturedAesJson) return;
+
+      area.value = lastCapturedAesJson.raw;
+      if (meta) {
+        meta.textContent = `Captured at ${new Date(lastCapturedAesJson.timestamp).toLocaleTimeString()} from ${lastCapturedAesJson.url}`;
+      }
+
+      if (summary) {
+        try {
+          const parsed = JSON.parse(lastCapturedAesJson.raw);
+          const root = Array.isArray(parsed) ? parsed[0] : parsed;
+          const matches = root?.Matches || root?.Play?.Matches || [];
+          if (matches.length > 0) {
+            summary.innerHTML = matches.map((m, idx) => {
+              return `<div class="p-1 bg-white rounded border border-slate-200">
+                <strong>Match #${idx + 1} (${escapeHtml(m.MatchFullName || 'M' + (idx+1))}):</strong> 
+                <span class="text-indigo-600">${escapeHtml(m.FirstTeamName || 'T1')}</span> vs <span class="text-indigo-600">${escapeHtml(m.SecondTeamName || 'T2')}</span> 
+                | 🕒 <span class="text-emerald-700">${escapeHtml(m.ScheduledStartDateTime || 'N/A')}</span> 
+                | 🏐 Ref: <span class="text-amber-700">${escapeHtml(m.WorkTeamText || m.WorkTeamName || 'N/A')}</span>
+              </div>`;
+            }).join('');
+          } else {
+            summary.innerHTML = '<span class="text-slate-400">No matches list array found in response.</span>';
+          }
+        } catch (e) {
+          summary.innerHTML = '<span class="text-rose-500">Could not parse JSON for inspection summary.</span>';
+        }
+      }
+    }
+
     async function fetchAesLiveData(rawUrl, targetTeamId = null) {
       if (!rawUrl || !rawUrl.trim()) {
         showToast('Please enter a valid AES URL.');
@@ -2050,6 +2135,13 @@
           }
           throw emptyErr;
         }
+
+        lastCapturedAesJson = {
+          url,
+          timestamp: new Date().toISOString(),
+          raw: jsonText
+        };
+        updateCapturedJsonModal();
 
         const success = parseAndApplyAESJson(jsonText, targetTeamId);
         return success;
@@ -2615,6 +2707,33 @@
         if (success) {
           closeModal();
         }
+      });
+
+      // Captured Raw AES JSON Modal Controls
+      const capturedJsonModal = document.getElementById('capturedJsonModal');
+      const openCapturedModal = () => {
+        updateCapturedJsonModal();
+        capturedJsonModal?.classList.remove('hidden');
+      };
+      const closeCapturedModal = () => {
+        capturedJsonModal?.classList.add('hidden');
+      };
+
+      document.getElementById('btnOpenCapturedJsonModal')?.addEventListener('click', openCapturedModal);
+      document.getElementById('btnCloseCapturedJsonModal')?.addEventListener('click', closeCapturedModal);
+      document.getElementById('btnCloseCapturedJsonModalBottom')?.addEventListener('click', closeCapturedModal);
+
+      document.getElementById('btnCopyCapturedJson')?.addEventListener('click', () => {
+        const area = document.getElementById('capturedJsonArea');
+        if (!area || !area.value) {
+          showToast('No captured JSON to copy.');
+          return;
+        }
+        navigator.clipboard.writeText(area.value).then(() => {
+          showToast('Captured AES JSON copied to clipboard!');
+        }).catch(() => {
+          showToast('Failed to copy JSON.');
+        });
       });
 
       // Initialize session persistence layer
