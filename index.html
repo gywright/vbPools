@@ -2192,6 +2192,14 @@
             }
           }
 
+          // Update work team (ref) if provided in AES data
+          if (m.WorkTeamId || m.WorkTeamName || m.WorkTeamText) {
+            const workTeam = findPoolTeam(m.WorkTeamId, m.WorkTeamName, m.WorkTeamText);
+            if (workTeam) {
+              poolMatch.refId = workTeam.id;
+            }
+          }
+
           const isTeam1SideA = poolMatch.teamAId === team1.id;
           let matchHasImportedScores = false;
 
