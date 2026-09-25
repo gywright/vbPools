@@ -105,6 +105,12 @@
           Install App
         </button>
 
+        <!-- Fetch Live AES Sync Button -->
+        <button id="btnOpenFetchModal" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition-all animate-pulse">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          Live AES Sync
+        </button>
+
         <!-- Import AES JSON Modal Trigger -->
         <button id="btnOpenImportModal" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors">
           <svg class="w-3.5 h-3.5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
@@ -318,15 +324,15 @@
     </div>
   </main>
 
-  <!-- AES JSON Import Modal -->
+  <!-- AES Sync & Import Modal -->
   <div id="importModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
-    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar">
       <div class="flex items-center justify-between pb-3 border-b border-slate-100">
         <div class="flex items-center gap-2.5">
-          <span class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-base">📋</span>
+          <span class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-base">🌐</span>
           <div>
-            <h3 class="font-extrabold text-sm text-slate-900">Import AES Team / Pool JSON</h3>
-            <p class="text-xs text-slate-500">Paste JSON from AES API (e.g. results.advancedeventsystems.com/api/...)</p>
+            <h3 class="font-extrabold text-sm text-slate-900">Sync Live AES Data or Import JSON</h3>
+            <p class="text-xs text-slate-500">Fetch live pool scores directly from AES or paste raw JSON</p>
           </div>
         </div>
         <button id="btnCloseImportModal" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
@@ -334,18 +340,47 @@
         </button>
       </div>
 
+      <!-- Live Fetch Section -->
+      <div class="bg-indigo-50/70 border border-indigo-100 rounded-xl p-3.5 space-y-2.5">
+        <div class="flex items-center justify-between">
+          <label for="aesUrlInput" class="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-indigo-600 animate-pulse"></span>
+            Fetch Live Scores from AES URL:
+          </label>
+          <span class="text-[10px] font-semibold text-indigo-600 uppercase tracking-wide">Live API Sync</span>
+        </div>
+        <div class="flex gap-2">
+          <input id="aesUrlInput" type="text"
+            class="w-full text-xs font-mono p-2.5 bg-white border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none shadow-2xs"
+            placeholder="https://results.advancedeventsystems.com/api/event/.../poolsheet/..."
+            value="https://results.advancedeventsystems.com/api/event/PTAwMDAwNDYwMjQ90/poolsheet/-55695">
+          <button id="btnFetchAesUrl" class="px-3.5 py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs transition-all flex-shrink-0 flex items-center gap-1">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            Fetch Live
+          </button>
+        </div>
+        <p class="text-[11px] text-indigo-700/80">Paste any AES pool URL or API link. Live data will overwrite scores in the active pool.</p>
+      </div>
+
+      <!-- Divider -->
+      <div class="relative flex py-1 items-center">
+        <div class="flex-grow border-t border-slate-200"></div>
+        <span class="flex-shrink mx-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-white px-1">Or Manual Paste</span>
+        <div class="flex-grow border-t border-slate-200"></div>
+      </div>
+
       <div class="space-y-2">
         <label for="importJsonInput" class="text-xs font-semibold text-slate-700">Paste JSON Object or Array:</label>
-        <textarea id="importJsonInput" rows="6" class="w-full text-xs font-mono p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder='{"TeamId":17540,"TeamName":"Bay to Bay 16-Premier","TeamText":"Bay to Bay 16-Premier (NC) (66)", "OpponentTeamName":"Slainte 18-Cobalt", "OpponentTeamText":"Slainte 18-Cobalt (NC) (70)"...}'></textarea>
+        <textarea id="importJsonInput" rows="4" class="w-full text-xs font-mono p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder='{"TeamId":17540,"TeamName":"Bay to Bay 16-Premier","TeamText":"Bay to Bay 16-Premier (NC) (66)", "OpponentTeamName":"Slainte 18-Cobalt", "OpponentTeamText":"Slainte 18-Cobalt (NC) (70)"...}'></textarea>
         <p class="text-[11px] text-slate-400">Supports single team endpoints, opponent pairs, or arrays of teams.</p>
       </div>
 
-      <div class="flex items-center justify-end gap-2 pt-2">
+      <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
         <button id="btnCancelImport" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
           Cancel
         </button>
-        <button id="btnExecuteImport" class="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-all">
-          Apply to Current Pool
+        <button id="btnExecuteImport" class="px-4 py-2 text-xs font-bold text-white bg-slate-800 hover:bg-slate-900 rounded-lg shadow-sm transition-all">
+          Apply Pasted JSON
         </button>
       </div>
     </div>
@@ -1854,6 +1889,61 @@
       showToast(`Applied: ${simCombo.label}`);
     };
 
+    async function fetchAesLiveData(rawUrl) {
+      if (!rawUrl || !rawUrl.trim()) {
+        showToast('Please enter a valid AES URL.');
+        return false;
+      }
+
+      let url = rawUrl.trim();
+      // Normalize standard web page URL to API endpoint if needed
+      if (url.includes('advancedeventsystems.com') && !url.includes('/api/')) {
+        url = url.replace('advancedeventsystems.com/', 'advancedeventsystems.com/api/');
+      }
+
+      showToast('Fetching live scores from AES...');
+
+      try {
+        let jsonText = null;
+
+        // Attempt 1: Direct fetch
+        try {
+          const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+          if (res.ok) {
+            jsonText = await res.text();
+          }
+        } catch (corsErr) {
+          console.warn('Direct fetch failed, trying CORS proxy:', corsErr);
+        }
+
+        // Attempt 2: CORS proxy fallback
+        if (!jsonText) {
+          const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+          const resProxy = await fetch(proxyUrl);
+          if (resProxy.ok) {
+            jsonText = await resProxy.text();
+          } else {
+            throw new Error(`Proxy response status: ${resProxy.status}`);
+          }
+        }
+
+        if (!jsonText) {
+          throw new Error('No data received from AES.');
+        }
+
+        const success = parseAndApplyAESJson(jsonText);
+        if (success) {
+          showToast('Live AES scores successfully loaded!');
+          return true;
+        }
+        return false;
+      } catch (err) {
+        console.error('AES Fetch Error:', err);
+        showToast('Failed to fetch AES data. Verify URL and connection.');
+        return false;
+      }
+    }
+
     function parseAndApplyAESJson(jsonText) {
       const activePool = getActivePool();
       try {
@@ -1876,9 +1966,24 @@
         const teamMap = new Map();
         const extractedMatches = [];
 
-        // Traverse root objects for Play / Matches or standalone matches
+        // Traverse root objects for Pool/Teams, Play/Matches, or standalone matches
         rootData.forEach(item => {
           if (!item) return;
+
+          // Case 0: Direct Pool object containing Teams array
+          const poolTeams = (item.Pool && Array.isArray(item.Pool.Teams)) ? item.Pool.Teams : (item.Teams && Array.isArray(item.Teams) ? item.Teams : null);
+          if (poolTeams) {
+            poolTeams.forEach((t, tIdx) => {
+              const name = t.TeamName || t.TeamText;
+              if (name) {
+                teamMap.set(name, {
+                  name: name,
+                  seed: tIdx + 1,
+                  id: t.TeamId
+                });
+              }
+            });
+          }
 
           // Case 1: Play wrapper containing Matches array
           const matchesList = item.Matches || (item.Play && item.Play.Matches) || null;
@@ -1971,7 +2076,15 @@
           }) || null;
         }
 
-        // Populate Match Scores
+        // Populate Match Scores (Reset existing scores first to reflect fresh state)
+        activePool.matches.forEach(m => {
+          m.sets = [
+            { scoreA: '', scoreB: '' },
+            { scoreA: '', scoreB: '' },
+            { scoreA: '', scoreB: '' }
+          ];
+        });
+
         let scoresPopulatedCount = 0;
 
         extractedMatches.forEach(m => {
@@ -2266,25 +2379,41 @@
       // Copy Standings Button
       document.getElementById('btnCopyStandings').addEventListener('click', copyStandingsToClipboard);
 
-      // AES JSON Import Modal controls
+      // AES Fetch & Import Modal controls
       const importModal = document.getElementById('importModal');
       const importInput = document.getElementById('importJsonInput');
+      const aesUrlInput = document.getElementById('aesUrlInput');
 
-      document.getElementById('btnOpenImportModal').addEventListener('click', () => {
+      const openModal = () => {
         importModal.classList.remove('hidden');
-        importInput.value = '';
-        importInput.focus();
-      });
+      };
 
-      document.getElementById('btnCloseImportModal').addEventListener('click', () => {
+      const closeModal = () => {
         importModal.classList.add('hidden');
+      };
+
+      document.getElementById('btnOpenImportModal')?.addEventListener('click', openModal);
+      document.getElementById('btnOpenFetchModal')?.addEventListener('click', openModal);
+      document.getElementById('btnCloseImportModal')?.addEventListener('click', closeModal);
+      document.getElementById('btnCancelImport')?.addEventListener('click', closeModal);
+
+      // Fetch Live AES Data Button Handler
+      document.getElementById('btnFetchAesUrl')?.addEventListener('click', async () => {
+        const btn = document.getElementById('btnFetchAesUrl');
+        const origText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = `<span class="animate-spin">⏳</span> Syncing...`;
+
+        const success = await fetchAesLiveData(aesUrlInput.value);
+        btn.disabled = false;
+        btn.innerHTML = origText;
+
+        if (success) {
+          closeModal();
+        }
       });
 
-      document.getElementById('btnCancelImport').addEventListener('click', () => {
-        importModal.classList.add('hidden');
-      });
-
-      document.getElementById('btnExecuteImport').addEventListener('click', () => {
+      document.getElementById('btnExecuteImport')?.addEventListener('click', () => {
         const text = importInput.value;
         if (!text.trim()) {
           showToast('Please paste valid AES JSON.');
@@ -2292,7 +2421,7 @@
         }
         const success = parseAndApplyAESJson(text);
         if (success) {
-          importModal.classList.add('hidden');
+          closeModal();
         }
       });
 
