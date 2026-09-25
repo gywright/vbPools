@@ -83,7 +83,7 @@
         </div>
         <div>
           <div class="flex items-center gap-2">
-            <h1 class="text-lg font-extrabold text-slate-900 tracking-tight">AES Pool Rank Calculator</h1>
+            <h1 class="text-lg font-extrabold text-slate-900 tracking-tight">AES Pool Rank Calculator <span class="text-xs font-semibold text-indigo-600 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded-md font-mono">v1.0.1</span></h1>
             <span class="bg-indigo-100 text-indigo-700 text-xs font-semibold px-2 py-0.5 rounded-full border border-indigo-200">USAV Rules</span>
             <span id="pwaBadge" class="hidden bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-200 uppercase tracking-wide">PWA Active</span>
           </div>
@@ -2070,7 +2070,11 @@
           // Case 1: Play wrapper containing Matches array
           const matchesList = item.Matches || (item.Play && item.Play.Matches) || null;
           if (matchesList && Array.isArray(matchesList)) {
-            matchesList.forEach(m => {
+            matchesList.forEach((m, mIdx) => {
+              // Ensure match index/number is preserved from API
+              if (!m.MatchNum) {
+                m.matchNum = mIdx + 1;
+              }
               extractedMatches.push(m);
               if (m.FirstTeamText || m.FirstTeamName) {
                 const name = m.FirstTeamText || m.FirstTeamName;
@@ -2171,24 +2175,28 @@
 
         let scoresPopulatedCount = 0;
 
-        extractedMatches.forEach(m => {
+        extractedMatches.forEach((m, idx) => {
           const team1 = findPoolTeam(m.FirstTeamId, m.FirstTeamName, m.FirstTeamText);
           const team2 = findPoolTeam(m.SecondTeamId, m.SecondTeamName, m.SecondTeamText);
 
-          if (!team1 || !team2 || team1.id === team2.id) return;
-
-          // If scoping to a single team, skip matches that don't involve targetTeamId
-          if (targetTeamId && team1.id !== targetTeamId && team2.id !== targetTeamId) {
-            return;
+          // If team matching failed or team1 === team2, attempt fallback match by index or order
+          let poolMatch = null;
+          if (team1 && team2 && team1.id !== team2.id) {
+            poolMatch = activePool.matches.find(pm =>
+              (pm.teamAId === team1.id && pm.teamBId === team2.id) ||
+              (pm.teamAId === team2.id && pm.teamBId === team1.id)
+            );
+          }
+          if (!poolMatch && activePool.matches[idx]) {
+            poolMatch = activePool.matches[idx];
           }
 
-          // Locate match in current schedule
-          const poolMatch = activePool.matches.find(pm =>
-            (pm.teamAId === team1.id && pm.teamBId === team2.id) ||
-            (pm.teamAId === team2.id && pm.teamBId === team1.id)
-          );
-
           if (!poolMatch) return;
+
+          // If scoping to a single team, skip matches that don't involve targetTeamId
+          if (targetTeamId && poolMatch.teamAId !== targetTeamId && poolMatch.teamBId !== targetTeamId) {
+            return;
+          }
 
           // Update scheduled time if provided in AES data
           if (m.ScheduledStartDateTime) {
@@ -2199,13 +2207,14 @@
           }
 
           // Update work team (ref) if provided in AES data (e.g. WorkTeamText)
-          if (m.WorkTeamText || m.WorkTeamName || m.WorkTeamId) {
+          const workTeamVal = m.WorkTeamText || m.WorkTeamName;
+          if (workTeamVal || m.WorkTeamId) {
             const workTeam = findPoolTeam(m.WorkTeamId, m.WorkTeamName, m.WorkTeamText);
             if (workTeam) {
               poolMatch.refId = workTeam.id;
               poolMatch.workTeamText = workTeam.shortName || workTeam.name;
-            } else if (m.WorkTeamText || m.WorkTeamName) {
-              poolMatch.workTeamText = m.WorkTeamText || m.WorkTeamName;
+            } else if (workTeamVal) {
+              poolMatch.workTeamText = String(workTeamVal).replace(/\s*\(NC\)\s*/gi, '').trim();
             }
           }
 
