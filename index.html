@@ -467,17 +467,17 @@
     // Standard schedule pairings for 3 and 4 team pools (AES / USAV Standard pool scheduling order)
     const POOL_SCHEDULES = {
       3: [
-        { matchNum: 1, teamA: 'T1', teamB: 'T3', ref: 'T2' },
-        { matchNum: 2, teamA: 'T2', teamB: 'T3', ref: 'T1' },
-        { matchNum: 3, teamA: 'T1', teamB: 'T2', ref: 'T3' }
+        { matchNum: 1, teamA: 'T1', teamB: 'T3', ref: 'T2', defaultTime: '8:00 AM' },
+        { matchNum: 2, teamA: 'T2', teamB: 'T3', ref: 'T1', defaultTime: '9:00 AM' },
+        { matchNum: 3, teamA: 'T1', teamB: 'T2', ref: 'T3', defaultTime: '10:00 AM' }
       ],
       4: [
-        { matchNum: 1, teamA: 'T1', teamB: 'T3', ref: 'T2' },
-        { matchNum: 2, teamA: 'T2', teamB: 'T4', ref: 'T1' },
-        { matchNum: 3, teamA: 'T1', teamB: 'T4', ref: 'T3' },
-        { matchNum: 4, teamA: 'T2', teamB: 'T3', ref: 'T1' },
-        { matchNum: 5, teamA: 'T3', teamB: 'T4', ref: 'T2' },
-        { matchNum: 6, teamA: 'T1', teamB: 'T2', ref: 'T4' }
+        { matchNum: 1, teamA: 'T1', teamB: 'T3', ref: 'T2', defaultTime: '8:00 AM' },
+        { matchNum: 2, teamA: 'T2', teamB: 'T4', ref: 'T1', defaultTime: '9:00 AM' },
+        { matchNum: 3, teamA: 'T1', teamB: 'T4', ref: 'T3', defaultTime: '10:00 AM' },
+        { matchNum: 4, teamA: 'T2', teamB: 'T3', ref: 'T1', defaultTime: '11:00 AM' },
+        { matchNum: 5, teamA: 'T3', teamB: 'T4', ref: 'T2', defaultTime: '12:00 PM' },
+        { matchNum: 6, teamA: 'T1', teamB: 'T2', ref: 'T4', defaultTime: '1:00 PM' }
       ]
     };
 
@@ -672,6 +672,9 @@
 
     function initializeMatchesForPool(poolId) {
       const p = state.poolData[poolId];
+      if (!p.aesUrl && POOL_PRESETS[poolId]) {
+        p.aesUrl = POOL_PRESETS[poolId].aesUrl;
+      }
       const schedule = POOL_SCHEDULES[p.poolSize];
       p.matches = schedule.map(item => {
         return {
@@ -680,6 +683,7 @@
           teamAId: item.teamA,
           teamBId: item.teamB,
           refId: item.ref,
+          scheduledTime: item.defaultTime || '',
           sets: [
             { scoreA: '', scoreB: '' },
             { scoreA: '', scoreB: '' },
@@ -701,6 +705,11 @@
     function syncUIWithActivePool() {
       const activePool = getActivePool();
       const presetInfo = POOL_PRESETS[state.activePoolId];
+
+      if (presetInfo) {
+        // Enforce the correct preset URL when switching between default known pools
+        activePool.aesUrl = presetInfo.aesUrl;
+      }
 
       // Update division info badge
       const divisionBadge = document.getElementById('divisionInfoBadge');
@@ -941,8 +950,9 @@
 
         card.innerHTML = `
           <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 flex-wrap">
               <span class="text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">Match #${match.matchNum}</span>
+              ${match.scheduledTime ? `<span class="text-[11px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100/80 px-2 py-0.5 rounded inline-flex items-center gap-1 font-mono-num"><svg class="w-3 h-3 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>${escapeHtml(match.scheduledTime)}</span>` : ''}
               ${refTeam ? `<span data-ref-label="${refTeam.id}" class="text-[11px] text-slate-400">Ref: ${escapeHtml(refTeam.shortName || refTeam.name)}</span>` : ''}
               ${set3Disabled ? '<span class="text-[10px] text-slate-400 font-medium italic">Set 3 not needed (2-0 sweep)</span>' : ''}
             </div>
@@ -1927,6 +1937,27 @@
       showToast(`Applied: ${simCombo.label}`);
     };
 
+    function formatAesTime(isoStr, courtObj) {
+      if (!isoStr) return null;
+      try {
+        const d = new Date(isoStr);
+        if (!isNaN(d.getTime())) {
+          let hours = d.getHours();
+          const minutes = d.getMinutes();
+          const ampm = hours >= 12 ? 'PM' : 'AM';
+          hours = hours % 12;
+          hours = hours ? hours : 12;
+          const minStr = minutes < 10 ? '0' + minutes : minutes;
+          let timeFormatted = `${hours}:${minStr} ${ampm}`;
+          if (courtObj && courtObj.Name) {
+            timeFormatted += ` • ${courtObj.Name}`;
+          }
+          return timeFormatted;
+        }
+      } catch (e) {}
+      return null;
+    }
+
     async function fetchAesLiveData(rawUrl, targetTeamId = null) {
       if (!rawUrl || !rawUrl.trim()) {
         showToast('Please enter a valid AES URL.');
@@ -2152,6 +2183,14 @@
           );
 
           if (!poolMatch) return;
+
+          // Update scheduled time if provided in AES data
+          if (m.ScheduledStartDateTime) {
+            const formattedTime = formatAesTime(m.ScheduledStartDateTime, m.Court);
+            if (formattedTime) {
+              poolMatch.scheduledTime = formattedTime;
+            }
+          }
 
           const isTeam1SideA = poolMatch.teamAId === team1.id;
           let matchHasImportedScores = false;
