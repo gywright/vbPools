@@ -467,17 +467,17 @@
     // Standard schedule pairings for 3 and 4 team pools (AES / USAV Standard pool scheduling order)
     const POOL_SCHEDULES = {
       3: [
-        { matchNum: 1, teamA: 'T1', teamB: 'T3', ref: 'T2', defaultTime: '8:00 AM' },
-        { matchNum: 2, teamA: 'T2', teamB: 'T3', ref: 'T1', defaultTime: '9:00 AM' },
-        { matchNum: 3, teamA: 'T1', teamB: 'T2', ref: 'T3', defaultTime: '10:00 AM' }
+        { matchNum: 1, teamA: 'T1', teamB: 'T3' },
+        { matchNum: 2, teamA: 'T2', teamB: 'T3' },
+        { matchNum: 3, teamA: 'T1', teamB: 'T2' }
       ],
       4: [
-        { matchNum: 1, teamA: 'T1', teamB: 'T3', ref: 'T2', defaultTime: '8:00 AM' },
-        { matchNum: 2, teamA: 'T2', teamB: 'T4', ref: 'T1', defaultTime: '9:00 AM' },
-        { matchNum: 3, teamA: 'T1', teamB: 'T4', ref: 'T3', defaultTime: '10:00 AM' },
-        { matchNum: 4, teamA: 'T2', teamB: 'T3', ref: 'T1', defaultTime: '11:00 AM' },
-        { matchNum: 5, teamA: 'T3', teamB: 'T4', ref: 'T2', defaultTime: '12:00 PM' },
-        { matchNum: 6, teamA: 'T1', teamB: 'T2', ref: 'T4', defaultTime: '1:00 PM' }
+        { matchNum: 1, teamA: 'T1', teamB: 'T3' },
+        { matchNum: 2, teamA: 'T2', teamB: 'T4' },
+        { matchNum: 3, teamA: 'T1', teamB: 'T4' },
+        { matchNum: 4, teamA: 'T2', teamB: 'T3' },
+        { matchNum: 5, teamA: 'T3', teamB: 'T4' },
+        { matchNum: 6, teamA: 'T1', teamB: 'T2' }
       ]
     };
 
@@ -682,8 +682,8 @@
           matchNum: item.matchNum,
           teamAId: item.teamA,
           teamBId: item.teamB,
-          refId: item.ref,
-          scheduledTime: item.defaultTime || '',
+          refId: null,
+          scheduledTime: '',
           sets: [
             { scoreA: '', scoreB: '' },
             { scoreA: '', scoreB: '' },
@@ -844,10 +844,7 @@
       activePool.matches.forEach((match, mIdx) => {
         const teamA = activePool.teams.find(t => t.id === match.teamAId);
         const teamB = activePool.teams.find(t => t.id === match.teamBId);
-        const refTeam = activePool.teams.find(t => t.id === match.refId);
-
-        const defaultTimes = { 1: '8:00 AM', 2: '9:00 AM', 3: '10:00 AM', 4: '11:00 AM', 5: '12:00 PM', 6: '1:00 PM' };
-        const timeDisplay = match.scheduledTime || defaultTimes[match.matchNum] || '';
+        const refTeam = match.refId ? activePool.teams.find(t => t.id === match.refId) : null;
 
         const colorA = TEAM_COLORS[activePool.teams.indexOf(teamA)];
         const colorB = TEAM_COLORS[activePool.teams.indexOf(teamB)];
@@ -955,8 +952,8 @@
           <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
             <div class="flex items-center gap-2 flex-wrap">
               <span class="text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">Match #${match.matchNum}</span>
-              ${timeDisplay ? `<span class="text-[11px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100/80 px-2 py-0.5 rounded inline-flex items-center gap-1 font-mono-num" title="Scheduled Start Time"><svg class="w-3 h-3 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>${escapeHtml(timeDisplay)}</span>` : ''}
-              ${refTeam ? `<span data-ref-label="${refTeam.id}" class="text-[11px] text-slate-400">Ref: ${escapeHtml(refTeam.shortName || refTeam.name)}</span>` : ''}
+              ${match.scheduledTime ? `<span class="text-[11px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100/80 px-2 py-0.5 rounded inline-flex items-center gap-1 font-mono-num" title="Scheduled Start Time"><svg class="w-3 h-3 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>${escapeHtml(match.scheduledTime)}</span>` : ''}
+              ${refTeam ? `<span data-ref-label="${refTeam.id}" class="text-[11px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">Ref: ${escapeHtml(refTeam.shortName || refTeam.name)}</span>` : ''}
               ${set3Disabled ? '<span class="text-[10px] text-slate-400 font-medium italic">Set 3 not needed (2-0 sweep)</span>' : ''}
             </div>
             ${statusBadge}
