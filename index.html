@@ -428,12 +428,12 @@
         teamCount: 56,
         defaultPoolSize: 4,
         name: '14 Boys: Bay to Bay 12-1',
-        aesUrl: 'https://results.advancedeventsystems.com/api/event/PTAwMDAwNDYwMjQ90/poolsheet/-53292',
+        aesUrl: 'https://results.advancedeventsystems.com/api/event/PTAwMDAwNDYwMjQ90/poolsheet/-57897',
         teams: [
-          { id: 'T1', seed: 19, poolSeed: 1, name: 'MVVC B 12 Red (19)', shortName: 'MVVC 12 Red (19)' },
-          { id: 'T2', seed: 23, poolSeed: 2, name: 'Bay to Bay 12-1 (23)', shortName: 'B2B 12-1 (23)' },
-          { id: 'T3', seed: 26, poolSeed: 3, name: 'SF Elite B 13 Navy (26)', shortName: 'SF Elite 13N (26)' },
-          { id: 'T4', seed: 9,  poolSeed: 4, name: 'SF Elite B 14 Gold (9)', shortName: 'SF Elite 14G (9)' }
+          { id: 'T1', seed: 1, poolSeed: 1, name: 'Pacific Rim 14-1', shortName: 'Pacific Rim 14-1', aesId: 18342 },
+          { id: 'T2', seed: 2, poolSeed: 2, name: 'MVVC B 12 Red', shortName: 'MVVC B 12 Red', aesId: 56927 },
+          { id: 'T3', seed: 3, poolSeed: 3, name: 'Empire 14 Blue', shortName: 'Empire 14 Blue', aesId: 196229 },
+          { id: 'T4', seed: 4, poolSeed: 4, name: 'Bay to Bay 12-1', shortName: 'B2B 12-1', aesId: 69360 }
         ]
       }
     };
@@ -452,7 +452,7 @@
         'pool-14b': {
           poolSize: 4,
           matchFormat: 'best2of3',
-          aesUrl: 'https://results.advancedeventsystems.com/api/event/PTAwMDAwNDYwMjQ90/poolsheet/-53292',
+          aesUrl: 'https://results.advancedeventsystems.com/api/event/PTAwMDAwNDYwMjQ90/poolsheet/-57897',
           teams: JSON.parse(JSON.stringify(POOL_PRESETS['pool-14b'].teams)),
           matches: []
         }
@@ -846,6 +846,9 @@
         const teamB = activePool.teams.find(t => t.id === match.teamBId);
         const refTeam = activePool.teams.find(t => t.id === match.refId);
 
+        const defaultTimes = { 1: '8:00 AM', 2: '9:00 AM', 3: '10:00 AM', 4: '11:00 AM', 5: '12:00 PM', 6: '1:00 PM' };
+        const timeDisplay = match.scheduledTime || defaultTimes[match.matchNum] || '';
+
         const colorA = TEAM_COLORS[activePool.teams.indexOf(teamA)];
         const colorB = TEAM_COLORS[activePool.teams.indexOf(teamB)];
 
@@ -952,7 +955,7 @@
           <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
             <div class="flex items-center gap-2 flex-wrap">
               <span class="text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">Match #${match.matchNum}</span>
-              ${match.scheduledTime ? `<span class="text-[11px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100/80 px-2 py-0.5 rounded inline-flex items-center gap-1 font-mono-num"><svg class="w-3 h-3 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>${escapeHtml(match.scheduledTime)}</span>` : ''}
+              ${timeDisplay ? `<span class="text-[11px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100/80 px-2 py-0.5 rounded inline-flex items-center gap-1 font-mono-num" title="Scheduled Start Time"><svg class="w-3 h-3 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>${escapeHtml(timeDisplay)}</span>` : ''}
               ${refTeam ? `<span data-ref-label="${refTeam.id}" class="text-[11px] text-slate-400">Ref: ${escapeHtml(refTeam.shortName || refTeam.name)}</span>` : ''}
               ${set3Disabled ? '<span class="text-[10px] text-slate-400 font-medium italic">Set 3 not needed (2-0 sweep)</span>' : ''}
             </div>
